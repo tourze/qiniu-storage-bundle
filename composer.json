@@ -26,7 +26,8 @@
     "tourze/doctrine-timestamp-bundle": "0.0.*",
     "tourze/doctrine-user-bundle": "0.0.*",
     "tourze/doctrine-track-bundle": "0.0.*",
-    "tourze/symfony-cron-job-bundle": "0.0.*"
+    "tourze/symfony-cron-job-bundle": "0.0.*",
+    "psr/log": "^3|^2|^1"
   },
   "autoload": {
     "psr-4": {
