@@ -10,7 +10,7 @@
     "doctrine/dbal": "^4.0",
     "doctrine/persistence": "^3.1 || ^4",
     "doctrine/doctrine-bundle": "^2.13",
-    "doctrine/orm": "^2.20 || ^3.0",
+    "doctrine/orm": "^3.0",
     "qiniu/php-sdk": "^7.14",
     "symfony/console": "^6.4",
     "symfony/config": "^6.4",
