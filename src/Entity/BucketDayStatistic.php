@@ -6,7 +6,6 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use QiniuStorageBundle\Entity\Traits\BucketStatisticAware;
 use QiniuStorageBundle\Repository\BucketDayStatisticRepository;
-use Symfony\Component\Serializer\Attribute\Groups;
 use Tourze\EasyAdmin\Attribute\Column\ExportColumn;
 use Tourze\EasyAdmin\Attribute\Column\ListColumn;
 
@@ -19,7 +18,6 @@ class BucketDayStatistic
 
     #[ListColumn(order: -1)]
     #[ExportColumn]
-    #[Groups(['restful_read', 'api_tree', 'admin_curd', 'api_list'])]
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => 'ID'])]
