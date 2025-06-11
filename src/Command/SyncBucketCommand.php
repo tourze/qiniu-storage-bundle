@@ -71,7 +71,7 @@ class SyncBucketCommand extends Command
 
             $this->entityManager->flush();
             $io->success(sprintf('账号 [%s] 的存储空间同步完成', $account->getName()));
-        } catch  (\Throwable $e) {
+        } catch (\Throwable $e) {
             $io->error(sprintf('同步过程中发生错误：%s', $e->getMessage()));
         }
     }
@@ -121,7 +121,7 @@ class SyncBucketCommand extends Command
 
             $this->entityManager->persist($bucket);
             $io->text(sprintf('已同步存储空间 [%s]', $bucketName));
-        } catch  (\Throwable $e) {
+        } catch (\Throwable $e) {
             $io->error(sprintf('同步存储空间 [%s] 时发生错误：%s', $bucketName, $e->getMessage()));
         }
     }

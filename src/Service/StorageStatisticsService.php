@@ -260,7 +260,7 @@ class StorageStatisticsService
             ]);
 
             return $hits;
-        } catch  (\Throwable $e) {
+        } catch (\Throwable $e) {
             $message = sprintf('获取存储空间 [%s] 的GET请求次数统计失败：%s',
                 $bucket->getName(), $e->getMessage());
             $this->logger->error($message, [
@@ -300,7 +300,7 @@ class StorageStatisticsService
             ]);
 
             return $flow;
-        } catch  (\Throwable $e) {
+        } catch (\Throwable $e) {
             $message = sprintf('获取存储空间 [%s] 的外网流出流量统计失败：%s',
                 $bucket->getName(), $e->getMessage());
             $this->logger->error($message, [
@@ -340,7 +340,7 @@ class StorageStatisticsService
             ]);
 
             return $flow;
-        } catch  (\Throwable $e) {
+        } catch (\Throwable $e) {
             $message = sprintf('获取存储空间 [%s] 的CDN回源流量统计失败：%s',
                 $bucket->getName(), $e->getMessage());
             $this->logger->error($message, [
@@ -375,7 +375,7 @@ class StorageStatisticsService
             ]);
 
             return $storage;
-        } catch  (\Throwable $e) {
+        } catch (\Throwable $e) {
 //            $message = sprintf('获取存储空间 [%s] 的%s统计信息失败：%s',
 //                $bucket->getName(), $typeName, $e->getMessage());
 //             if ($io) {
