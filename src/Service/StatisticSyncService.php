@@ -129,7 +129,7 @@ class StatisticSyncService
                 'time' => $time->format('Y-m-d H:i:s'),
                 'granularity' => $granularity->name
             ]);
-        } catch (\Throwable $e) {
+        } catch  (\Throwable $e) {
             $message = sprintf('同步存储空间 [%s] 的统计信息失败：%s',
                 $bucket->getName(), $e->getMessage());
             $this->logger->error($message, [
