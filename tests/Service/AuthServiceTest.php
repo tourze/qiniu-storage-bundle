@@ -25,44 +25,109 @@ class AuthServiceTest extends TestCase
 
     public function testCreateAuth_withValidAccount_returnsAuthInstance(): void
     {
-        // 由于Qiniu\Auth是final类，无法直接mock，这里跳过该测试
-        $this->markTestSkipped('由于Qiniu\Auth是final类，无法直接mock');
+        // 直接测试createAuth方法的返回值类型
+        $auth = $this->authService->createAuth($this->account);
+        
+        $this->assertInstanceOf(\Qiniu\Auth::class, $auth);
     }
 
     public function testCreateUploadToken_withValidParams_returnsToken(): void
     {
-        // 由于Qiniu\Auth是final类，无法直接mock，这里跳过该测试
-        $this->markTestSkipped('由于Qiniu\Auth是final类，无法直接mock');
+        $bucket = 'test-bucket';
+        $key = 'test-key';
+        $expires = 7200;
+        
+        $token = $this->authService->createUploadToken($this->account, $bucket, $key, $expires);
+        
+        $this->assertIsString($token);
+        $this->assertNotEmpty($token);
+        // 七牛云上传凭证包含冒号分隔的三部分
+        $this->assertStringContainsString(':', $token);
     }
 
     public function testCreateUploadToken_withCustomExpires_passesCorrectExpires(): void
     {
-        // 由于Qiniu\Auth是final类，无法直接mock，这里跳过该测试
-        $this->markTestSkipped('由于Qiniu\Auth是final类，无法直接mock');
+        $bucket = 'test-bucket';
+        $customExpires = 1800; // 30分钟
+        
+        $token = $this->authService->createUploadToken($this->account, $bucket, null, $customExpires);
+        
+        $this->assertIsString($token);
+        $this->assertNotEmpty($token);
+        
+        // 解码上传凭证以验证过期时间
+        $parts = explode(':', $token);
+        $this->assertCount(3, $parts);
+        
+        $encodedPolicy = $parts[2];
+        $policy = json_decode(base64_decode($encodedPolicy), true);
+        $this->assertArrayHasKey('deadline', $policy);
+        
+        // 验证deadline是合理的时间戳
+        $deadline = $policy['deadline'];
+        $this->assertIsInt($deadline);
+        $this->assertGreaterThan(time(), $deadline);
     }
 
     public function testCreateUploadToken_withKeyAndPolicy_passesAllParams(): void
     {
-        // 由于Qiniu\Auth是final类，无法直接mock，这里跳过该测试
-        $this->markTestSkipped('由于Qiniu\Auth是final类，无法直接mock');
+        $bucket = 'test-bucket';
+        $key = 'test/file.jpg';
+        $policy = json_encode(['returnBody' => 'success']);
+        
+        $token = $this->authService->createUploadToken($this->account, $bucket, $key, 3600, $policy);
+        
+        $this->assertIsString($token);
+        $this->assertNotEmpty($token);
+        
+        // 解码上传凭证以验证参数
+        $parts = explode(':', $token);
+        $this->assertCount(3, $parts);
+        
+        $encodedPolicy = $parts[2];
+        $decodedPolicy = json_decode(base64_decode($encodedPolicy), true);
+        $this->assertArrayHasKey('scope', $decodedPolicy);
+        $this->assertEquals($bucket . ':' . $key, $decodedPolicy['scope']);
     }
 
     public function testCreateManageToken_withValidParams_returnsToken(): void
     {
-        // 由于Qiniu\Auth是final类，无法直接mock，这里跳过该测试
-        $this->markTestSkipped('由于Qiniu\Auth是final类，无法直接mock');
+        $url = 'http://api.qiniuapi.com/buckets';
+        $body = 'param=value';
+        
+        $token = $this->authService->createManageToken($this->account, $url, $body);
+        
+        $this->assertIsString($token);
+        $this->assertNotEmpty($token);
+        // 管理凭证包含空格分隔的两部分
+        $this->assertStringContainsString(' ', $token);
     }
 
     public function testCreateManageToken_withEmptyBody_passesEmptyString(): void
     {
-        // 由于Qiniu\Auth是final类，无法直接mock，这里跳过该测试
-        $this->markTestSkipped('由于Qiniu\Auth是final类，无法直接mock');
+        $url = 'http://api.qiniuapi.com/buckets';
+        
+        $token = $this->authService->createManageToken($this->account, $url);
+        
+        $this->assertIsString($token);
+        $this->assertNotEmpty($token);
+        // 空体情况下也应该返回有效的凭证
+        $this->assertStringContainsString(' ', $token);
     }
 
     public function testCreateDownloadToken_withValidParams_returnsToken(): void
     {
-        // 由于Qiniu\Auth是final类，无法直接mock，这里跳过该测试
-        $this->markTestSkipped('由于Qiniu\Auth是final类，无法直接mock');
+        $url = 'http://example.qiniuapi.com/test.jpg';
+        $expires = 3600;
+        
+        $signedUrl = $this->authService->createDownloadToken($this->account, $url, $expires);
+        
+        $this->assertIsString($signedUrl);
+        $this->assertNotEmpty($signedUrl);
+        // 下载凭证实际返回的是签名后的URL
+        $this->assertStringContainsString($url, $signedUrl);
+        $this->assertStringContainsString('e=', $signedUrl); // 包含过期时间参数
+        $this->assertStringContainsString('token=', $signedUrl); // 包含凭证参数
     }
 
     public function testCreateSignedUrl_withValidParams_returnsSignedUrl(): void

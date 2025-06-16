@@ -44,24 +44,99 @@ class StorageStatisticsServiceTest extends TestCase
         );
     }
 
-    public function testSyncBucketMinuteStatistics_withValidData_persistsStatistics(): void
+    public function testGetStandardStorage_withValidParams_returnsSizeValue(): void
     {
-        $this->markTestSkipped('需要调整测试方法以匹配实际的StorageStatisticsService实现');
+        $bucket = $this->createBucketMock();
+        $begin = '20230101';
+        $end = '20230102';
+        $granularity = \QiniuStorageBundle\Enum\TimeGranularity::DAY;
+        
+        // 模拟HTTP响应
+        $mockResponse = $this->createMock(\Symfony\Contracts\HttpClient\ResponseInterface::class);
+        $mockResponse->method('getContent')
+            ->willReturn(json_encode(['datas' => [1000, 2000, 3000]]));
+        
+        $this->httpClient->expects($this->once())
+            ->method('request')
+            ->with('GET', $this->stringContains('v6/space'))
+            ->willReturn($mockResponse);
+        
+        // 创建模拟SymfonyStyle
+        $io = $this->createMock(\Symfony\Component\Console\Style\SymfonyStyle::class);
+        
+        $result = $this->statisticsService->getStandardStorage($granularity, $bucket, $begin, $end, $io);
+        
+        $this->assertEquals(3000, $result); // 返回最后一个值
     }
 
-    public function testSyncBucketHourStatistics_withValidData_persistsStatistics(): void
+    public function testGetLineStorage_withValidParams_returnsSizeValue(): void
     {
-        $this->markTestSkipped('需要调整测试方法以匹配实际的StorageStatisticsService实现');
+        $bucket = $this->createBucketMock();
+        $begin = '20230101';
+        $end = '20230102';
+        $granularity = \QiniuStorageBundle\Enum\TimeGranularity::DAY;
+        
+        // 模拟HTTP响应
+        $mockResponse = $this->createMock(\Symfony\Contracts\HttpClient\ResponseInterface::class);
+        $mockResponse->method('getContent')
+            ->willReturn(json_encode(['datas' => [500, 1500]]));
+        
+        $this->httpClient->expects($this->once())
+            ->method('request')
+            ->with('GET', $this->stringContains('v6/space_line'))
+            ->willReturn($mockResponse);
+        
+        // 创建模拟SymfonyStyle
+        $io = $this->createMock(\Symfony\Component\Console\Style\SymfonyStyle::class);
+        
+        $result = $this->statisticsService->getLineStorage($granularity, $bucket, $begin, $end, $io);
+        
+        $this->assertEquals(1500, $result);
     }
 
-    public function testSyncBucketDayStatistics_withValidData_persistsStatistics(): void
+    public function testGetArchiveStorage_withValidParams_returnsSizeValue(): void
     {
-        $this->markTestSkipped('需要调整测试方法以匹配实际的StorageStatisticsService实现');
+        $bucket = $this->createBucketMock();
+        $begin = '20230101';
+        $end = '20230102';
+        $granularity = \QiniuStorageBundle\Enum\TimeGranularity::HOUR;
+        
+        // 模拟HTTP响应
+        $mockResponse = $this->createMock(\Symfony\Contracts\HttpClient\ResponseInterface::class);
+        $mockResponse->method('getContent')
+            ->willReturn(json_encode(['datas' => [100, 200, 300, 400]]));
+        
+        $this->httpClient->expects($this->once())
+            ->method('request')
+            ->with('GET', $this->stringContains('v6/space_archive'))
+            ->willReturn($mockResponse);
+        
+        // 创建模拟SymfonyStyle
+        $io = $this->createMock(\Symfony\Component\Console\Style\SymfonyStyle::class);
+        
+        $result = $this->statisticsService->getArchiveStorage($granularity, $bucket, $begin, $end, $io);
+        
+        $this->assertEquals(400, $result);
     }
 
-    public function testSyncBucketMinuteStatistics_withApiError_returnsZero(): void
+    public function testGetStandardStorage_withApiError_returnsZero(): void
     {
-        $this->markTestSkipped('需要调整测试方法以匹配实际的StorageStatisticsService实现');
+        $bucket = $this->createBucketMock();
+        $begin = '20230101';
+        $end = '20230102';
+        $granularity = \QiniuStorageBundle\Enum\TimeGranularity::DAY;
+        
+        // 模拟HTTP请求异常
+        $this->httpClient->expects($this->once())
+            ->method('request')
+            ->willThrowException(new \Exception('API调用失败'));
+        
+        // 创建模拟SymfonyStyle
+        $io = $this->createMock(\Symfony\Component\Console\Style\SymfonyStyle::class);
+        
+        $result = $this->statisticsService->getStandardStorage($granularity, $bucket, $begin, $end, $io);
+        
+        $this->assertEquals(0, $result); // 异常情况下返回0
     }
 
     /**
