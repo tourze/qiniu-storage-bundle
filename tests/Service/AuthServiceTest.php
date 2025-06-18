@@ -38,8 +38,6 @@ class AuthServiceTest extends TestCase
         $expires = 7200;
         
         $token = $this->authService->createUploadToken($this->account, $bucket, $key, $expires);
-        
-        $this->assertIsString($token);
         $this->assertNotEmpty($token);
         // 七牛云上传凭证包含冒号分隔的三部分
         $this->assertStringContainsString(':', $token);
@@ -51,8 +49,6 @@ class AuthServiceTest extends TestCase
         $customExpires = 1800; // 30分钟
         
         $token = $this->authService->createUploadToken($this->account, $bucket, null, $customExpires);
-        
-        $this->assertIsString($token);
         $this->assertNotEmpty($token);
         
         // 解码上传凭证以验证过期时间
@@ -76,8 +72,6 @@ class AuthServiceTest extends TestCase
         $policy = json_encode(['returnBody' => 'success']);
         
         $token = $this->authService->createUploadToken($this->account, $bucket, $key, 3600, $policy);
-        
-        $this->assertIsString($token);
         $this->assertNotEmpty($token);
         
         // 解码上传凭证以验证参数
@@ -96,8 +90,6 @@ class AuthServiceTest extends TestCase
         $body = 'param=value';
         
         $token = $this->authService->createManageToken($this->account, $url, $body);
-        
-        $this->assertIsString($token);
         $this->assertNotEmpty($token);
         // 管理凭证包含空格分隔的两部分
         $this->assertStringContainsString(' ', $token);
@@ -108,8 +100,6 @@ class AuthServiceTest extends TestCase
         $url = 'http://api.qiniuapi.com/buckets';
         
         $token = $this->authService->createManageToken($this->account, $url);
-        
-        $this->assertIsString($token);
         $this->assertNotEmpty($token);
         // 空体情况下也应该返回有效的凭证
         $this->assertStringContainsString(' ', $token);
@@ -121,8 +111,6 @@ class AuthServiceTest extends TestCase
         $expires = 3600;
         
         $signedUrl = $this->authService->createDownloadToken($this->account, $url, $expires);
-        
-        $this->assertIsString($signedUrl);
         $this->assertNotEmpty($signedUrl);
         // 下载凭证实际返回的是签名后的URL
         $this->assertStringContainsString($url, $signedUrl);

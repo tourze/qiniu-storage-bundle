@@ -6,8 +6,6 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use QiniuStorageBundle\Entity\Traits\BucketStatisticAware;
 use QiniuStorageBundle\Repository\BucketHourStatisticRepository;
-use Tourze\EasyAdmin\Attribute\Column\ExportColumn;
-use Tourze\EasyAdmin\Attribute\Column\ListColumn;
 
 #[ORM\Entity(repositoryClass: BucketHourStatisticRepository::class)]
 #[ORM\Table(name: 'ims_qiniu_api_storage_bucket_hour_statistic', options: ['comment' => '七牛云存储空间小时统计'])]
@@ -16,8 +14,6 @@ class BucketHourStatistic
 {
     use BucketStatisticAware;
 
-    #[ListColumn(order: -1)]
-    #[ExportColumn]
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => 'ID'])]
