@@ -21,6 +21,8 @@ use Tourze\Symfony\CronJob\Attribute\AsCronTask;
 #[AsCronTask('*/5 * * * *')]
 class SyncBucketMinuteStatisticCommand extends Command
 {
+    public const NAME = 'qiniu:sync-bucket-minute-statistics';
+    
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly StatisticSyncService $statisticSyncService,

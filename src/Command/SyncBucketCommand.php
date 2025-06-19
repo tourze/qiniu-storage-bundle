@@ -22,6 +22,8 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 )]
 class SyncBucketCommand extends Command
 {
+    public const NAME = 'qiniu:sync-buckets';
+    
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly AccountRepository $accountRepository,

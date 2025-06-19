@@ -22,6 +22,8 @@ use Tourze\Symfony\CronJob\Attribute\AsCronTask;
 #[AsCronTask('15 13 * * *')]
 class SyncBucketDayStatisticCommand extends Command
 {
+    public const NAME = 'qiniu:sync-bucket-day-statistics';
+    
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly StatisticSyncService $statisticSyncService,
