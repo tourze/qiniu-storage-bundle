@@ -10,7 +10,7 @@ use QiniuStorageBundle\Repository\BucketHourStatisticRepository;
 #[ORM\Entity(repositoryClass: BucketHourStatisticRepository::class)]
 #[ORM\Table(name: 'ims_qiniu_api_storage_bucket_hour_statistic', options: ['comment' => '七牛云存储空间小时统计'])]
 #[ORM\UniqueConstraint(columns: ['bucket_id', 'time'])]
-class BucketHourStatistic
+class BucketHourStatistic implements \Stringable
 {
     use BucketStatisticAware;
 
@@ -36,5 +36,10 @@ class BucketHourStatistic
     {
         $this->time = $time;
         return $this;
+    }
+
+    public function __toString(): string
+    {
+        return $this->time->format('Y-m-d H:i');
     }
 }

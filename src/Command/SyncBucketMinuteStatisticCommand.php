@@ -15,7 +15,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Tourze\Symfony\CronJob\Attribute\AsCronTask;
 
 #[AsCommand(
-    name: 'qiniu:sync-bucket-minute-statistics',
+    name: self::NAME,
     description: '同步所有七牛云存储空间的5分钟统计信息',
 )]
 #[AsCronTask('*/5 * * * *')]
@@ -62,7 +62,7 @@ class SyncBucketMinuteStatisticCommand extends Command
         $now = CarbonImmutable::now();
         // 向下取整到5分钟
         $minute = (int) $now->format('i');
-        $minuteRounded = floor($minute / 5) * 5;
+        $minuteRounded = (int) floor($minute / 5) * 5;
         $now = $now->setMinute($minuteRounded)->setSecond(0)->startOfSecond();
 
         for ($i = 1; $i <= $minutes; $i++) {

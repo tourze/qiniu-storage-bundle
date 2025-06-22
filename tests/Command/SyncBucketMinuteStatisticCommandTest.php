@@ -5,16 +5,12 @@ namespace QiniuStorageBundle\Tests\Command;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use QiniuStorageBundle\Command\SyncBucketMinuteStatisticCommand;
-use QiniuStorageBundle\Repository\AccountRepository;
-use QiniuStorageBundle\Repository\BucketRepository;
 use QiniuStorageBundle\Service\StatisticSyncService;
 use Symfony\Component\Console\Tester\CommandTester;
 
 class SyncBucketMinuteStatisticCommandTest extends TestCase
 {
     private EntityManagerInterface $entityManager;
-    private AccountRepository $accountRepository;
-    private BucketRepository $bucketRepository;
     private StatisticSyncService $statisticSyncService;
     private SyncBucketMinuteStatisticCommand $command;
     private CommandTester $commandTester;
@@ -23,8 +19,6 @@ class SyncBucketMinuteStatisticCommandTest extends TestCase
     {
         // 创建模拟对象
         $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->accountRepository = $this->createMock(AccountRepository::class);
-        $this->bucketRepository = $this->createMock(BucketRepository::class);
         $this->statisticSyncService = $this->createMock(StatisticSyncService::class);
 
         // 创建命令

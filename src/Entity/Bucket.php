@@ -8,14 +8,14 @@ use QiniuStorageBundle\Repository\BucketRepository;
 use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineTrackBundle\Attribute\TrackColumn;
-use Tourze\DoctrineUserBundle\Attribute\CreatedByColumn;
-use Tourze\DoctrineUserBundle\Attribute\UpdatedByColumn;
+use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 
 #[ORM\Entity(repositoryClass: BucketRepository::class)]
 #[ORM\Table(name: 'ims_qiniu_api_storage_bucket', options: ['comment' => '七牛云存储空间'])]
 class Bucket implements \Stringable
 {
     use TimestampableAware;
+    use BlameableAware;
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => 'ID'])]
@@ -47,14 +47,6 @@ class Bucket implements \Stringable
     #[TrackColumn]
     #[ORM\Column(type: Types::BOOLEAN, nullable: true, options: ['comment' => '有效', 'default' => 0])]
     private ?bool $valid = false;
-
-    #[CreatedByColumn]
-    #[ORM\Column(nullable: true, options: ['comment' => '创建人'])]
-    private ?string $createdBy = null;
-
-    #[UpdatedByColumn]
-    #[ORM\Column(nullable: true, options: ['comment' => '更新人'])]
-    private ?string $updatedBy = null;
 
     public function getId(): ?int
     {
@@ -138,30 +130,6 @@ class Bucket implements \Stringable
         return $this;
     }
 
-    public function setCreatedBy(?string $createdBy): self
-    {
-        $this->createdBy = $createdBy;
-
-        return $this;
-    }
-
-    public function getCreatedBy(): ?string
-    {
-        return $this->createdBy;
-    }
-
-    public function setUpdatedBy(?string $updatedBy): self
-    {
-        $this->updatedBy = $updatedBy;
-
-        return $this;
-    }
-
-    public function getUpdatedBy(): ?string
-    {
-        return $this->updatedBy;
-    }
-
     public function isValid(): ?bool
     {
         return $this->valid;
@@ -172,11 +140,13 @@ class Bucket implements \Stringable
         $this->valid = $valid;
 
         return $this;
-    }public function __toString(): string
+    }
+
+    public function __toString(): string
     {
-        if (!$this->getId()) {
+        if ($this->id === null || $this->id === 0) {
             return '';
         }
-        return "{$this->getName()}";
+        return $this->getName();
     }
 }

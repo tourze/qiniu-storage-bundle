@@ -10,7 +10,7 @@ use QiniuStorageBundle\Repository\BucketDayStatisticRepository;
 #[ORM\Entity(repositoryClass: BucketDayStatisticRepository::class)]
 #[ORM\Table(name: 'ims_qiniu_api_storage_bucket_day_statistic', options: ['comment' => '七牛云存储空间天统计'])]
 #[ORM\UniqueConstraint(columns: ['bucket_id', 'time'])]
-class BucketDayStatistic
+class BucketDayStatistic implements \Stringable
 {
     use BucketStatisticAware;
 
@@ -36,5 +36,10 @@ class BucketDayStatistic
     {
         $this->time = $time;
         return $this;
+    }
+
+    public function __toString(): string
+    {
+        return $this->time->format('Y-m-d');
     }
 }

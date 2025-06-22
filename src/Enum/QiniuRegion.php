@@ -33,7 +33,7 @@ enum QiniuRegion: string implements Labelable, Itemable, Selectable
 
     /**
      * 华南-广东
-     * 
+     *
      */
     case HUANAN_GUANGDONG = 'z2';
 

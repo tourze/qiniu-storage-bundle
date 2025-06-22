@@ -17,8 +17,6 @@ class SyncBucketCommandTest extends TestCase
     private EntityManagerInterface $entityManager;
     private AccountRepository $accountRepository;
     private BucketRepository $bucketRepository;
-    private SyncBucketCommand $command;
-    private CommandTester $commandTester;
 
     protected function setUp(): void
     {
@@ -27,19 +25,7 @@ class SyncBucketCommandTest extends TestCase
         $this->accountRepository = $this->createMock(AccountRepository::class);
         $this->bucketRepository = $this->createMock(BucketRepository::class);
 
-        // 创建命令
-        $this->command = new SyncBucketCommand(
-            $this->entityManager,
-            $this->accountRepository,
-            $this->bucketRepository
-        );
-
-        // 创建应用并添加命令
-        $application = new Application();
-        $application->add($this->command);
-
-        // 创建命令测试器
-        $this->commandTester = new CommandTester($this->command);
+        // 不需要在 setUp 中创建命令，因为每个测试都会创建自己的命令实例
     }
 
     public function testExecute_withNoValidAccounts_displaysWarning(): void
@@ -49,11 +35,25 @@ class SyncBucketCommandTest extends TestCase
             ->with(['valid' => true])
             ->willReturn([]);
 
+        // 创建命令
+        $command = new SyncBucketCommand(
+            $this->entityManager,
+            $this->accountRepository,
+            $this->bucketRepository
+        );
+
+        // 创建应用并添加命令
+        $application = new Application();
+        $application->add($command);
+
+        // 创建命令测试器
+        $commandTester = new CommandTester($command);
+
         // 执行命令
-        $this->commandTester->execute([]);
+        $commandTester->execute([]);
 
         // 断言输出包含警告信息
-        $output = $this->commandTester->getDisplay();
+        $output = $commandTester->getDisplay();
         $this->assertStringContainsString('没有找到有效的七牛云账号配置', $output);
     }
 
@@ -87,11 +87,12 @@ class SyncBucketCommandTest extends TestCase
         $accountRepository = $this->accountRepository;
         $bucketRepository = $this->bucketRepository;
         
-        $mockCommand = new #[\Symfony\Component\Console\Attribute\AsCommand('test:sync-buckets')] class(
+        $mockCommand = new #[\Symfony\Component\Console\Attribute\AsCommand(name: self::NAME, description: 'Test sync buckets command')] class(
             $entityManager,
             $accountRepository,
             $bucketRepository
         ) extends SyncBucketCommand {
+            public const NAME = 'test:sync-buckets';
             
             private $testEntityManager;
             private $testAccountRepository;
@@ -165,11 +166,12 @@ class SyncBucketCommandTest extends TestCase
         $accountRepository = $this->accountRepository;
         $bucketRepository = $this->bucketRepository;
         
-        $mockCommand = new #[\Symfony\Component\Console\Attribute\AsCommand('test:sync-buckets-error')] class(
+        $mockCommand = new #[\Symfony\Component\Console\Attribute\AsCommand(name: self::NAME, description: 'Test sync buckets error command')] class(
             $entityManager,
             $accountRepository,
             $bucketRepository
         ) extends SyncBucketCommand {
+            public const NAME = 'test:sync-buckets-error';
             
             private $testAccountRepository;
             

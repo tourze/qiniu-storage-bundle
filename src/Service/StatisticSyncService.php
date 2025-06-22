@@ -44,7 +44,7 @@ class StatisticSyncService
         Bucket $bucket,
         ?SymfonyStyle $io = null
     ): void {
-        if ($io) {
+        if ($io !== null) {
             $io->text(sprintf('正在同步存储空间 [%s] 的统计信息 (%s)', $bucket->getName(), $time->format('Y-m-d H:i')));
         }
 
@@ -139,7 +139,7 @@ class StatisticSyncService
                 'exception' => $e
             ]);
 
-            if ($io) {
+            if ($io !== null) {
                 $io->error($message);
             }
         }
@@ -147,7 +147,7 @@ class StatisticSyncService
 
     /**
      * 获取有效的存储空间列表
-     * 
+     *
      * @return Bucket[]
      */
     public function getValidBuckets(): array
@@ -168,7 +168,7 @@ class StatisticSyncService
             case TimeGranularity::MINUTE:
                 // 5分钟粒度，向下取整到5分钟
                 $minute = (int) $time->format('i');
-                $minuteRounded = floor($minute / 5) * 5;
+                $minuteRounded = (int) floor($minute / 5) * 5;
                 $beginTime = $time->setTime((int) $time->format('H'), $minuteRounded, 0);
                 $endTime = $time->setTime((int) $time->format('H'), $minuteRounded + 4, 59);
                 break;

@@ -99,8 +99,10 @@ class Account implements \Stringable
         $this->valid = $valid;
 
         return $this;
-    }public function __toString(): string
+    }
+
+    public function __toString(): string
     {
-        return $this->getId() ? "{$this->getName()}" : '';
+        return $this->id !== null && $this->id !== 0 ? $this->getName() : '';
     }
 }

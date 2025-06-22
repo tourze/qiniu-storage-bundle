@@ -17,7 +17,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
-    name: 'qiniu:sync-buckets',
+    name: self::NAME,
     description: '同步所有七牛云账号的存储空间信息',
 )]
 class SyncBucketCommand extends Command

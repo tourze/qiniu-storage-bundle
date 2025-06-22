@@ -2,39 +2,21 @@
 
 namespace QiniuStorageBundle\Tests\Service;
 
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use QiniuStorageBundle\Entity\Account;
 use QiniuStorageBundle\Entity\Bucket;
-use QiniuStorageBundle\Repository\BucketDayStatisticRepository;
-use QiniuStorageBundle\Repository\BucketHourStatisticRepository;
-use QiniuStorageBundle\Repository\BucketMinuteStatisticRepository;
-use QiniuStorageBundle\Repository\BucketRepository;
-use QiniuStorageBundle\Service\AuthService;
 use QiniuStorageBundle\Service\StorageStatisticsService;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class StorageStatisticsServiceTest extends TestCase
 {
-    private EntityManagerInterface $entityManager;
-    private BucketRepository $bucketRepository;
-    private BucketHourStatisticRepository $hourStatisticRepository;
-    private BucketDayStatisticRepository $dayStatisticRepository;
-    private BucketMinuteStatisticRepository $minuteStatisticRepository;
-    private AuthService $authService;
     private HttpClientInterface $httpClient;
     private LoggerInterface $logger;
     private StorageStatisticsService $statisticsService;
 
     protected function setUp(): void
     {
-        $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->bucketRepository = $this->createMock(BucketRepository::class);
-        $this->hourStatisticRepository = $this->createMock(BucketHourStatisticRepository::class);
-        $this->dayStatisticRepository = $this->createMock(BucketDayStatisticRepository::class);
-        $this->minuteStatisticRepository = $this->createMock(BucketMinuteStatisticRepository::class);
-        $this->authService = $this->createMock(AuthService::class);
         $this->httpClient = $this->createMock(HttpClientInterface::class);
         $this->logger = $this->createMock(LoggerInterface::class);
 
