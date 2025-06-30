@@ -18,7 +18,7 @@ use Tourze\Symfony\CronJob\Attribute\AsCronTask;
     name: self::NAME,
     description: '同步所有七牛云存储空间的5分钟统计信息',
 )]
-#[AsCronTask('*/5 * * * *')]
+#[AsCronTask(expression: '*/5 * * * *')]
 class SyncBucketMinuteStatisticCommand extends Command
 {
     public const NAME = 'qiniu:sync-bucket-minute-statistics';

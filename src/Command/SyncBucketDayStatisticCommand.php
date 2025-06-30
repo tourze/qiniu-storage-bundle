@@ -18,8 +18,8 @@ use Tourze\Symfony\CronJob\Attribute\AsCronTask;
     name: self::NAME,
     description: '同步所有七牛云存储空间的统计信息',
 )]
-#[AsCronTask('5 0 * * *')]
-#[AsCronTask('15 13 * * *')]
+#[AsCronTask(expression: '5 0 * * *')]
+#[AsCronTask(expression: '15 13 * * *')]
 class SyncBucketDayStatisticCommand extends Command
 {
     public const NAME = 'qiniu:sync-bucket-day-statistics';

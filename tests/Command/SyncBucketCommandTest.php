@@ -195,7 +195,7 @@ class SyncBucketCommandTest extends TestCase
                 foreach ($accounts as $account) {
                     try {
                         // 模拟API调用失败
-                        throw new \Exception('API调用失败');
+                        throw new \QiniuStorageBundle\Exception\QiniuApiException('API调用失败');
                     } catch (\Throwable $e) {
                         // 异常已被处理，继续执行
                         continue;
