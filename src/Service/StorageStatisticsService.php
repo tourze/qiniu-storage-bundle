@@ -2,85 +2,67 @@
 
 namespace QiniuStorageBundle\Service;
 
+use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
-use Qiniu\Auth;
+use QiniuStorageBundle\Client\QiniuApiClient;
 use QiniuStorageBundle\Entity\Bucket;
 use QiniuStorageBundle\Enum\IntelligentTieringTier;
 use QiniuStorageBundle\Enum\TimeGranularity;
+use QiniuStorageBundle\Request\GetStorageStatisticsRequest;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+#[WithMonologChannel(channel: 'qiniu_storage')]
 class StorageStatisticsService
 {
     public function __construct(
-        private readonly HttpClientInterface $httpClient,
+        private readonly QiniuApiClient $apiClient,
         private readonly LoggerInterface $logger,
     ) {
     }
 
     public function getStandardStorage(TimeGranularity $g, Bucket $bucket, string $begin, string $end, SymfonyStyle $io): int
     {
-        $url = sprintf('http://api.qiniuapi.com/v6/space?bucket=%s&begin=%s&end=%s&g=%s',
-            $bucket->getName(), $begin, $end, $g->value);
-
         $this->logger->info('开始获取标准存储统计信息', [
             'bucket' => $bucket->getName(),
-            'url' => $url
         ]);
 
-        return $this->fetchStorageStatistics($bucket, $url, '标准存储', $io);
+        return $this->fetchStorageStatistics($bucket, $begin, $end, $g->value, 'space', '标准存储', $io);
     }
 
     public function getLineStorage(TimeGranularity $g, Bucket $bucket, string $begin, string $end, SymfonyStyle $io): int
     {
-        $url = sprintf('http://api.qiniuapi.com/v6/space_line?bucket=%s&begin=%s&end=%s&g=%s',
-            $bucket->getName(), $begin, $end, $g->value);
-
         $this->logger->info('开始获取低频存储统计信息', [
             'bucket' => $bucket->getName(),
-            'url' => $url
         ]);
 
-        return $this->fetchStorageStatistics($bucket, $url, '低频存储', $io);
+        return $this->fetchStorageStatistics($bucket, $begin, $end, $g->value, 'space_line', '低频存储', $io);
     }
 
     public function getArchiveStorage(TimeGranularity $g, Bucket $bucket, string $begin, string $end, SymfonyStyle $io): int
     {
-        $url = sprintf('http://api.qiniuapi.com/v6/space_archive?bucket=%s&begin=%s&end=%s&g=%s',
-            $bucket->getName(), $begin, $end, $g->value);
-
         $this->logger->info('开始获取归档存储统计信息', [
             'bucket' => $bucket->getName(),
-            'url' => $url
         ]);
 
-        return $this->fetchStorageStatistics($bucket, $url, '归档存储', $io);
+        return $this->fetchStorageStatistics($bucket, $begin, $end, $g->value, 'space_archive', '归档存储', $io);
     }
 
     public function getArchiveIrStorage(TimeGranularity $g, Bucket $bucket, string $begin, string $end, SymfonyStyle $io): int
     {
-        $url = sprintf('http://api.qiniuapi.com/v6/space_archive_ir?bucket=%s&begin=%s&end=%s&g=%s',
-            $bucket->getName(), $begin, $end, $g->value);
-
         $this->logger->info('开始获取归档直读存储统计信息', [
             'bucket' => $bucket->getName(),
-            'url' => $url
         ]);
 
-        return $this->fetchStorageStatistics($bucket, $url, '归档直读存储', $io);
+        return $this->fetchStorageStatistics($bucket, $begin, $end, $g->value, 'space_archive_ir', '归档直读存储', $io);
     }
 
     public function getDeepArchiveStorage(TimeGranularity $g, Bucket $bucket, string $begin, string $end, SymfonyStyle $io): int
     {
-        $url = sprintf('http://api.qiniuapi.com/v6/space_deep_archive?bucket=%s&begin=%s&end=%s&g=%s',
-            $bucket->getName(), $begin, $end, $g->value);
-
         $this->logger->info('开始获取深度归档存储统计信息', [
             'bucket' => $bucket->getName(),
-            'url' => $url
         ]);
 
-        return $this->fetchStorageStatistics($bucket, $url, '深度归档存储', $io);
+        return $this->fetchStorageStatistics($bucket, $begin, $end, $g->value, 'space_deep_archive', '深度归档存储', $io);
     }
 
     /**
@@ -88,17 +70,14 @@ class StorageStatisticsService
      */
     public function getIntelligentTieringStorage(TimeGranularity $g, Bucket $bucket, string $begin, string $end, IntelligentTieringTier $tier = IntelligentTieringTier::FREQUENT_ACCESS, ?SymfonyStyle $io = null): int
     {
-        $url = sprintf('http://api.qiniuapi.com/v6/space_intelligent_tiering?bucket=%s&begin=%s&end=%s&g=%s&tier=%s',
-            $bucket->getName(), $begin, $end, $g->value, $tier->name);
-
         $this->logger->info('开始获取智能分层存储统计信息', [
             'bucket' => $bucket->getName(),
             'tier' => $tier->name,
-            'url' => $url
         ]);
 
         $typeName = sprintf('智能分层存储(%s)', $tier->getLabel());
-        return $this->fetchStorageStatistics($bucket, $url, $typeName, $io);
+
+        return $this->fetchStorageStatistics($bucket, $begin, $end, $g->value, 'space_intelligent_tiering', $typeName, $io);
     }
 
     /**
@@ -106,17 +85,14 @@ class StorageStatisticsService
      */
     public function getIntelligentTieringCount(TimeGranularity $g, Bucket $bucket, string $begin, string $end, IntelligentTieringTier $tier = IntelligentTieringTier::FREQUENT_ACCESS, ?SymfonyStyle $io = null): int
     {
-        $url = sprintf('http://api.qiniuapi.com/v6/count_intelligent_tiering?bucket=%s&begin=%s&end=%s&g=%s&tier=%s',
-            $bucket->getName(), $begin, $end, $g->value, $tier->name);
-
         $this->logger->info('开始获取智能分层存储文件数量统计信息', [
             'bucket' => $bucket->getName(),
             'tier' => $tier->name,
-            'url' => $url
         ]);
 
         $typeName = sprintf('智能分层文件数(%s)', $tier->getLabel());
-        return $this->fetchStorageStatistics($bucket, $url, $typeName, $io);
+
+        return $this->fetchStorageStatistics($bucket, $begin, $end, $g->value, 'count_intelligent_tiering', $typeName, $io);
     }
 
     /**
@@ -124,15 +100,11 @@ class StorageStatisticsService
      */
     public function getStandardCount(TimeGranularity $g, Bucket $bucket, string $begin, string $end, ?SymfonyStyle $io = null): int
     {
-        $url = sprintf('http://api.qiniuapi.com/v6/count?bucket=%s&begin=%s&end=%s&g=%s',
-            $bucket->getName(), $begin, $end, $g->value);
-
         $this->logger->info('开始获取标准存储文件数量统计信息', [
             'bucket' => $bucket->getName(),
-            'url' => $url
         ]);
 
-        return $this->fetchStorageStatistics($bucket, $url, '标准存储文件数', $io);
+        return $this->fetchStorageStatistics($bucket, $begin, $end, $g->value, 'count', '标准存储文件数', $io);
     }
 
     /**
@@ -140,15 +112,11 @@ class StorageStatisticsService
      */
     public function getLineCount(TimeGranularity $g, Bucket $bucket, string $begin, string $end, ?SymfonyStyle $io = null): int
     {
-        $url = sprintf('http://api.qiniuapi.com/v6/count_line?bucket=%s&begin=%s&end=%s&g=%s',
-            $bucket->getName(), $begin, $end, $g->value);
-
         $this->logger->info('开始获取低频存储文件数量统计信息', [
             'bucket' => $bucket->getName(),
-            'url' => $url
         ]);
 
-        return $this->fetchStorageStatistics($bucket, $url, '低频存储文件数', $io);
+        return $this->fetchStorageStatistics($bucket, $begin, $end, $g->value, 'count_line', '低频存储文件数', $io);
     }
 
     /**
@@ -156,15 +124,11 @@ class StorageStatisticsService
      */
     public function getArchiveCount(TimeGranularity $g, Bucket $bucket, string $begin, string $end, ?SymfonyStyle $io = null): int
     {
-        $url = sprintf('http://api.qiniuapi.com/v6/count_archive?bucket=%s&begin=%s&end=%s&g=%s',
-            $bucket->getName(), $begin, $end, $g->value);
-
         $this->logger->info('开始获取归档存储文件数量统计信息', [
             'bucket' => $bucket->getName(),
-            'url' => $url
         ]);
 
-        return $this->fetchStorageStatistics($bucket, $url, '归档存储文件数', $io);
+        return $this->fetchStorageStatistics($bucket, $begin, $end, $g->value, 'count_archive', '归档存储文件数', $io);
     }
 
     /**
@@ -172,15 +136,11 @@ class StorageStatisticsService
      */
     public function getArchiveIrCount(TimeGranularity $g, Bucket $bucket, string $begin, string $end, ?SymfonyStyle $io = null): int
     {
-        $url = sprintf('http://api.qiniuapi.com/v6/count_archive_ir?bucket=%s&begin=%s&end=%s&g=%s',
-            $bucket->getName(), $begin, $end, $g->value);
-
         $this->logger->info('开始获取归档直读存储文件数量统计信息', [
             'bucket' => $bucket->getName(),
-            'url' => $url
         ]);
 
-        return $this->fetchStorageStatistics($bucket, $url, '归档直读存储文件数', $io);
+        return $this->fetchStorageStatistics($bucket, $begin, $end, $g->value, 'count_archive_ir', '归档直读存储文件数', $io);
     }
 
     /**
@@ -188,15 +148,11 @@ class StorageStatisticsService
      */
     public function getDeepArchiveCount(TimeGranularity $g, Bucket $bucket, string $begin, string $end, ?SymfonyStyle $io = null): int
     {
-        $url = sprintf('http://api.qiniuapi.com/v6/count_deep_archive?bucket=%s&begin=%s&end=%s&g=%s',
-            $bucket->getName(), $begin, $end, $g->value);
-
         $this->logger->info('开始获取深度归档存储文件数量统计信息', [
             'bucket' => $bucket->getName(),
-            'url' => $url
         ]);
 
-        return $this->fetchStorageStatistics($bucket, $url, '深度归档存储文件数', $io);
+        return $this->fetchStorageStatistics($bucket, $begin, $end, $g->value, 'count_deep_archive', '深度归档存储文件数', $io);
     }
 
     /**
@@ -204,15 +160,11 @@ class StorageStatisticsService
      */
     public function getIntelligentTieringMonitorCount(TimeGranularity $g, Bucket $bucket, string $begin, string $end, ?SymfonyStyle $io = null): int
     {
-        $url = sprintf('http://api.qiniuapi.com/v6/count_intelligent_tiering_monitor?bucket=%s&begin=%s&end=%s&g=%s',
-            $bucket->getName(), $begin, $end, $g->value);
-
         $this->logger->info('开始获取智能分层监控文件数量统计信息', [
             'bucket' => $bucket->getName(),
-            'url' => $url
         ]);
 
-        return $this->fetchStorageStatistics($bucket, $url, '智能分层监控文件数', $io);
+        return $this->fetchStorageStatistics($bucket, $begin, $end, $g->value, 'count_intelligent_tiering_monitor', '智能分层监控文件数', $io);
     }
 
     /**
@@ -220,15 +172,11 @@ class StorageStatisticsService
      */
     public function getPutRequests(TimeGranularity $g, Bucket $bucket, string $begin, string $end, ?SymfonyStyle $io = null): int
     {
-        $url = sprintf('http://api.qiniuapi.com/v6/rs_put?bucket=%s&begin=%s&end=%s&g=%s',
-            $bucket->getName(), $begin, $end, $g->value);
-
         $this->logger->info('开始获取PUT请求次数统计信息', [
             'bucket' => $bucket->getName(),
-            'url' => $url
         ]);
 
-        return $this->fetchStorageStatistics($bucket, $url, 'PUT请求次数', $io);
+        return $this->fetchStorageStatistics($bucket, $begin, $end, $g->value, 'rs_put', 'PUT请求次数', $io);
     }
 
     /**
@@ -236,37 +184,52 @@ class StorageStatisticsService
      */
     public function getGetRequests(TimeGranularity $g, Bucket $bucket, string $begin, string $end, ?SymfonyStyle $io = null): int
     {
+        $startTime = microtime(true);
+
         try {
+            $this->logger->info('开始请求GET请求次数统计', [
+                'bucket' => $bucket->getName(),
+            ]);
+
+            $this->apiClient->setAccount($bucket->getAccount());
+
+            // 对于 blob_io 接口，我们需要特殊处理
             $url = sprintf('http://api.qiniuapi.com/v6/blob_io?begin=%s&end=%s&g=%s&select=hits&$metric=hits&$bucket=%s',
                 $begin, $end, $g->value, $bucket->getName());
-            $mac = new Auth($bucket->getAccount()->getAccessKey(), $bucket->getAccount()->getSecretKey());
-            $authorization = 'QBox ' . $mac->signRequest($url, '', '');
-            $response = $this->httpClient->request('GET', $url, [
+
+            $authorization = $this->apiClient->createQBoxAuthorization($url, '');
+            $response = $this->apiClient->getHttpClientInstance()->request('GET', $url, [
                 'headers' => [
-                    'Authorization' => $authorization
-                ]
+                    'Authorization' => $authorization,
+                ],
             ]);
 
             $content = $response->getContent();
             $stats = json_decode($content, true);
             $hits = 0;
-            if (!empty($stats[0]['values']['hits'])) {
-                $hits = $stats[0]['values']['hits'];
+            if (is_array($stats) && isset($stats[0]) && is_array($stats[0]) && isset($stats[0]['values']) && is_array($stats[0]['values']) && isset($stats[0]['values']['hits']) && '' !== $stats[0]['values']['hits']) {
+                $hits = is_numeric($stats[0]['values']['hits']) ? (int) $stats[0]['values']['hits'] : 0;
             }
+
+            $duration = round((microtime(true) - $startTime) * 1000, 2);
 
             $this->logger->info('获取GET请求次数统计成功', [
                 'bucket' => $bucket->getName(),
-                'hits' => $hits
+                'hits' => $hits,
+                'duration_ms' => $duration,
             ]);
 
             return $hits;
         } catch (\Throwable $e) {
+            $duration = round((microtime(true) - $startTime) * 1000, 2);
             $message = sprintf('获取存储空间 [%s] 的GET请求次数统计失败：%s',
                 $bucket->getName(), $e->getMessage());
             $this->logger->error($message, [
                 'bucket' => $bucket->getName(),
-                'exception' => $e
+                'duration_ms' => $duration,
+                'exception' => $e,
             ]);
+
             return 0;
         }
     }
@@ -276,37 +239,52 @@ class StorageStatisticsService
      */
     public function getInternetTraffic(TimeGranularity $g, Bucket $bucket, string $begin, string $end, ?SymfonyStyle $io = null): int
     {
+        $startTime = microtime(true);
+
         try {
+            $this->logger->info('开始请求外网流出流量统计', [
+                'bucket' => $bucket->getName(),
+            ]);
+
+            $this->apiClient->setAccount($bucket->getAccount());
+
+            // 对于 blob_io 接口，我们需要特殊处理
             $url = sprintf('http://api.qiniuapi.com/v6/blob_io?begin=%s&end=%s&g=%s&select=flow&$metric=flow_out&$bucket=%s',
                 $begin, $end, $g->value, $bucket->getName());
-            $mac = new Auth($bucket->getAccount()->getAccessKey(), $bucket->getAccount()->getSecretKey());
-            $authorization = 'QBox ' . $mac->signRequest($url, '', '');
-            $response = $this->httpClient->request('GET', $url, [
+
+            $authorization = $this->apiClient->createQBoxAuthorization($url, '');
+            $response = $this->apiClient->getHttpClientInstance()->request('GET', $url, [
                 'headers' => [
-                    'Authorization' => $authorization
-                ]
+                    'Authorization' => $authorization,
+                ],
             ]);
 
             $content = $response->getContent();
             $stats = json_decode($content, true);
             $flow = 0;
-            if (!empty($stats[0]['values']['flow'])) {
-                $flow = $stats[0]['values']['flow'];
+            if (is_array($stats) && isset($stats[0]) && is_array($stats[0]) && isset($stats[0]['values']) && is_array($stats[0]['values']) && isset($stats[0]['values']['flow']) && '' !== $stats[0]['values']['flow']) {
+                $flow = is_numeric($stats[0]['values']['flow']) ? (int) $stats[0]['values']['flow'] : 0;
             }
+
+            $duration = round((microtime(true) - $startTime) * 1000, 2);
 
             $this->logger->info('获取外网流出流量统计成功', [
                 'bucket' => $bucket->getName(),
-                'flow' => $flow
+                'flow' => $flow,
+                'duration_ms' => $duration,
             ]);
 
             return $flow;
         } catch (\Throwable $e) {
+            $duration = round((microtime(true) - $startTime) * 1000, 2);
             $message = sprintf('获取存储空间 [%s] 的外网流出流量统计失败：%s',
                 $bucket->getName(), $e->getMessage());
             $this->logger->error($message, [
                 'bucket' => $bucket->getName(),
-                'exception' => $e
+                'duration_ms' => $duration,
+                'exception' => $e,
             ]);
+
             return 0;
         }
     }
@@ -316,76 +294,98 @@ class StorageStatisticsService
      */
     public function getCdnTraffic(TimeGranularity $g, Bucket $bucket, string $begin, string $end, ?SymfonyStyle $io = null): int
     {
+        $startTime = microtime(true);
+
         try {
+            $this->logger->info('开始请求CDN回源流量统计', [
+                'bucket' => $bucket->getName(),
+            ]);
+
+            $this->apiClient->setAccount($bucket->getAccount());
+
+            // 对于 blob_io 接口，我们需要特殊处理
             $url = sprintf('http://api.qiniuapi.com/v6/blob_io?begin=%s&end=%s&g=%s&select=flow&$metric=cdn_flow_out&$bucket=%s',
                 $begin, $end, $g->value, $bucket->getName());
-            $mac = new Auth($bucket->getAccount()->getAccessKey(), $bucket->getAccount()->getSecretKey());
-            $authorization = 'QBox ' . $mac->signRequest($url, '', '');
-            $response = $this->httpClient->request('GET', $url, [
+
+            $authorization = $this->apiClient->createQBoxAuthorization($url, '');
+            $response = $this->apiClient->getHttpClientInstance()->request('GET', $url, [
                 'headers' => [
-                    'Authorization' => $authorization
-                ]
+                    'Authorization' => $authorization,
+                ],
             ]);
 
             $content = $response->getContent();
             $stats = json_decode($content, true);
             $flow = 0;
-            if (!empty($stats[0]['values']['flow'])) {
-                $flow = $stats[0]['values']['flow'];
+            if (is_array($stats) && isset($stats[0]) && is_array($stats[0]) && isset($stats[0]['values']) && is_array($stats[0]['values']) && isset($stats[0]['values']['flow']) && '' !== $stats[0]['values']['flow']) {
+                $flow = is_numeric($stats[0]['values']['flow']) ? (int) $stats[0]['values']['flow'] : 0;
             }
+
+            $duration = round((microtime(true) - $startTime) * 1000, 2);
 
             $this->logger->info('获取CDN回源流量统计成功', [
                 'bucket' => $bucket->getName(),
-                'flow' => $flow
+                'flow' => $flow,
+                'duration_ms' => $duration,
             ]);
 
             return $flow;
         } catch (\Throwable $e) {
+            $duration = round((microtime(true) - $startTime) * 1000, 2);
             $message = sprintf('获取存储空间 [%s] 的CDN回源流量统计失败：%s',
                 $bucket->getName(), $e->getMessage());
             $this->logger->error($message, [
                 'bucket' => $bucket->getName(),
-                'exception' => $e
+                'duration_ms' => $duration,
+                'exception' => $e,
             ]);
+
             return 0;
         }
     }
 
-    private function fetchStorageStatistics(Bucket $bucket, string $url, string $typeName, ?SymfonyStyle $io = null): int
+    private function fetchStorageStatistics(Bucket $bucket, string $begin, string $end, string $granularity, string $type, string $typeName, ?SymfonyStyle $io = null): int
     {
-        try {
-            $mac = new Auth($bucket->getAccount()->getAccessKey(), $bucket->getAccount()->getSecretKey());
-            $authorization = 'QBox ' . $mac->signRequest($url, '', '');
-            $response = $this->httpClient->request('GET', $url, [
-                'headers' => [
-                    'Authorization' => $authorization
-                ]
-            ]);
+        $startTime = microtime(true);
 
-            $content = $response->getContent();
-            $stats = json_decode($content, true);
-            $datas = $stats['datas'] ?? [];
-            $storage = !empty($datas) ? (int)(end($datas) ?? 0) : 0;
-            //dump($typeName, $content);
+        $this->logger->info('开始请求存储统计信息', [
+            'bucket' => $bucket->getName(),
+            'type' => $typeName,
+        ]);
+
+        try {
+            $this->apiClient->setAccount($bucket->getAccount());
+            $request = new GetStorageStatisticsRequest($bucket->getName(), $begin, $end, $granularity, $type);
+            $response = $this->apiClient->request($request);
+
+            $datas = is_array($response) ? ($response['datas'] ?? []) : [];
+            $storage = [] !== $datas ? (is_array($datas) && is_numeric(end($datas)) ? (int) end($datas) : 0) : 0;
+            $duration = round((microtime(true) - $startTime) * 1000, 2);
 
             $this->logger->info('获取存储统计信息成功', [
                 'bucket' => $bucket->getName(),
                 'type' => $typeName,
-                'storage' => $storage
+                'storage' => $storage,
+                'duration_ms' => $duration,
             ]);
 
             return $storage;
         } catch (\Throwable $e) {
-//            $message = sprintf('获取存储空间 [%s] 的%s统计信息失败：%s',
-//                $bucket->getName(), $typeName, $e->getMessage());
-//             if ($io) {
-//                 $io->error($message);
-//             }
-//            $this->logger->error($message, [
-//                'bucket' => $bucket->getName(),
-//                'type' => $typeName,
-//                'exception' => $e
-//            ]);
+            $duration = round((microtime(true) - $startTime) * 1000, 2);
+            $message = sprintf('获取存储空间 [%s] 的%s统计信息失败：%s',
+                $bucket->getName(), $typeName, $e->getMessage());
+
+            $this->logger->error($message, [
+                'bucket' => $bucket->getName(),
+                'type' => $typeName,
+                'duration_ms' => $duration,
+                'exception' => $e,
+            ]);
+
+            if (null !== $io) {
+                $io->error($message);
+            }
+
             return 0;
         }
     }

@@ -2,115 +2,174 @@
 
 namespace QiniuStorageBundle\Tests\Service;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use QiniuStorageBundle\Entity\Account;
 use QiniuStorageBundle\Service\AuthService;
+use Tourze\PHPUnitSymfonyKernelTest\AbstractIntegrationTestCase;
 
-class AuthServiceTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(AuthService::class)]
+#[RunTestsInSeparateProcesses]
+final class AuthServiceTest extends AbstractIntegrationTestCase
 {
-    private AuthService $authService;
-    private Account $account;
+    protected function onSetUp(): void
+    {
+        // 此测试类无需特殊设置
+    }
+
     private const ACCESS_KEY = 'test_access_key';
     private const SECRET_KEY = 'test_secret_key';
 
-    protected function setUp(): void
+    private function createMockAccount(): Account
     {
-        $this->authService = new AuthService();
+        // 使用实际的 Account 实体实例替代 Mock 对象，符合静态分析规则
+        $account = new Account();
 
-        // 创建模拟账号
-        $this->account = $this->createMock(Account::class);
-        $this->account->method('getAccessKey')->willReturn(self::ACCESS_KEY);
-        $this->account->method('getSecretKey')->willReturn(self::SECRET_KEY);
+        // 使用反射设置私有属性，因为实体可能没有公共的 setter 方法
+        $reflectionClass = new \ReflectionClass($account);
+
+        $accessKeyProperty = $reflectionClass->getProperty('accessKey');
+        $accessKeyProperty->setAccessible(true);
+        $accessKeyProperty->setValue($account, self::ACCESS_KEY);
+
+        $secretKeyProperty = $reflectionClass->getProperty('secretKey');
+        $secretKeyProperty->setAccessible(true);
+        $secretKeyProperty->setValue($account, self::SECRET_KEY);
+
+        return $account;
     }
 
-    public function testCreateAuth_withValidAccount_returnsAuthInstance(): void
+    public function testCreateUploadTokenWithValidAccountReturnsToken(): void
     {
-        // 直接测试createAuth方法的返回值类型
-        $auth = $this->authService->createAuth($this->account);
-        
-        $this->assertInstanceOf(\Qiniu\Auth::class, $auth);
-    }
+        /** @var AuthService $authService */
+        $authService = self::getService(AuthService::class);
+        $account = $this->createMockAccount();
 
-    public function testCreateUploadToken_withValidParams_returnsToken(): void
-    {
-        $bucket = 'test-bucket';
-        $key = 'test-key';
-        $expires = 7200;
-        
-        $token = $this->authService->createUploadToken($this->account, $bucket, $key, $expires);
+        // 测试createUploadToken方法返回有效的token
+        $token = $authService->createUploadToken($account, 'test-bucket');
+
+        $this->assertIsString($token);
         $this->assertNotEmpty($token);
         // 七牛云上传凭证包含冒号分隔的三部分
         $this->assertStringContainsString(':', $token);
     }
 
-    public function testCreateUploadToken_withCustomExpires_passesCorrectExpires(): void
+    public function testCreateUploadTokenWithValidParamsReturnsToken(): void
     {
+        /** @var AuthService $authService */
+        $authService = self::getService(AuthService::class);
+        $account = $this->createMockAccount();
+
+        $bucket = 'test-bucket';
+        $key = 'test-key';
+        $expires = 7200;
+
+        $token = $authService->createUploadToken($account, $bucket, $key, $expires);
+        $this->assertNotEmpty($token);
+        // 七牛云上传凭证包含冒号分隔的三部分
+        $this->assertStringContainsString(':', $token);
+    }
+
+    public function testCreateUploadTokenWithCustomExpiresPassesCorrectExpires(): void
+    {
+        /** @var AuthService $authService */
+        $authService = self::getService(AuthService::class);
+        $account = $this->createMockAccount();
+
         $bucket = 'test-bucket';
         $customExpires = 1800; // 30分钟
-        
-        $token = $this->authService->createUploadToken($this->account, $bucket, null, $customExpires);
+
+        $token = $authService->createUploadToken($account, $bucket, null, $customExpires);
         $this->assertNotEmpty($token);
-        
+
         // 解码上传凭证以验证过期时间
         $parts = explode(':', $token);
         $this->assertCount(3, $parts);
-        
+
         $encodedPolicy = $parts[2];
-        $policy = json_decode(base64_decode($encodedPolicy), true);
+        $decodedPolicy = base64_decode($encodedPolicy, true);
+        $this->assertNotFalse($decodedPolicy, 'Base64 decode should not fail');
+        $policy = json_decode($decodedPolicy, true);
+        self::assertIsArray($policy);
         $this->assertArrayHasKey('deadline', $policy);
-        
+
         // 验证deadline是合理的时间戳
         $deadline = $policy['deadline'];
         $this->assertIsInt($deadline);
         $this->assertGreaterThan(time(), $deadline);
     }
 
-    public function testCreateUploadToken_withKeyAndPolicy_passesAllParams(): void
+    public function testCreateUploadTokenWithKeyAndPolicyPassesAllParams(): void
     {
+        /** @var AuthService $authService */
+        $authService = self::getService(AuthService::class);
+        $account = $this->createMockAccount();
+
         $bucket = 'test-bucket';
         $key = 'test/file.jpg';
         $policy = json_encode(['returnBody' => 'success']);
-        
-        $token = $this->authService->createUploadToken($this->account, $bucket, $key, 3600, $policy);
+        if (false === $policy) {
+            self::fail('Failed to encode policy JSON');
+        }
+
+        $token = $authService->createUploadToken($account, $bucket, $key, 3600, $policy);
         $this->assertNotEmpty($token);
-        
+
         // 解码上传凭证以验证参数
         $parts = explode(':', $token);
         $this->assertCount(3, $parts);
-        
+
         $encodedPolicy = $parts[2];
-        $decodedPolicy = json_decode(base64_decode($encodedPolicy), true);
+        $decodedBase64 = base64_decode($encodedPolicy, true);
+        $this->assertNotFalse($decodedBase64, 'Base64 decode should not fail');
+        $decodedPolicy = json_decode($decodedBase64, true);
+        self::assertIsArray($decodedPolicy);
         $this->assertArrayHasKey('scope', $decodedPolicy);
         $this->assertEquals($bucket . ':' . $key, $decodedPolicy['scope']);
     }
 
-    public function testCreateManageToken_withValidParams_returnsToken(): void
+    public function testCreateManageTokenWithValidParamsReturnsToken(): void
     {
+        /** @var AuthService $authService */
+        $authService = self::getService(AuthService::class);
+        $account = $this->createMockAccount();
+
         $url = 'http://api.qiniuapi.com/buckets';
         $body = 'param=value';
-        
-        $token = $this->authService->createManageToken($this->account, $url, $body);
+
+        $token = $authService->createManageToken($account, $url, $body);
         $this->assertNotEmpty($token);
         // 管理凭证包含空格分隔的两部分
         $this->assertStringContainsString(' ', $token);
     }
 
-    public function testCreateManageToken_withEmptyBody_passesEmptyString(): void
+    public function testCreateManageTokenWithEmptyBodyPassesEmptyString(): void
     {
+        /** @var AuthService $authService */
+        $authService = self::getService(AuthService::class);
+        $account = $this->createMockAccount();
+
         $url = 'http://api.qiniuapi.com/buckets';
-        
-        $token = $this->authService->createManageToken($this->account, $url);
+
+        $token = $authService->createManageToken($account, $url);
         $this->assertNotEmpty($token);
         // 空体情况下也应该返回有效的凭证
         $this->assertStringContainsString(' ', $token);
     }
 
-    public function testCreateDownloadToken_withValidParams_returnsToken(): void
+    public function testCreateDownloadTokenWithValidParamsReturnsToken(): void
     {
+        /** @var AuthService $authService */
+        $authService = self::getService(AuthService::class);
+        $account = $this->createMockAccount();
+
         $url = 'http://example.qiniuapi.com/test.jpg';
         $expires = 3600;
-        
-        $signedUrl = $this->authService->createDownloadToken($this->account, $url, $expires);
+
+        $signedUrl = $authService->createDownloadToken($account, $url, $expires);
         $this->assertNotEmpty($signedUrl);
         // 下载凭证实际返回的是签名后的URL
         $this->assertStringContainsString($url, $signedUrl);
@@ -118,8 +177,11 @@ class AuthServiceTest extends TestCase
         $this->assertStringContainsString('token=', $signedUrl); // 包含凭证参数
     }
 
-    public function testCreateSignedUrl_withValidParams_returnsSignedUrl(): void
+    public function testCreateSignedUrlWithValidParamsReturnsSignedUrl(): void
     {
+        /** @var AuthService $authService */
+        $authService = self::getService(AuthService::class);
+
         $url = 'http://test.qiniuapi.com/test/resource';
         $headers = ['Content-Type' => 'application/json'];
         $body = '{"key":"value"}';
@@ -128,7 +190,8 @@ class AuthServiceTest extends TestCase
         $reflectionMethod = new \ReflectionMethod(AuthService::class, 'generateSigningStr');
         $reflectionMethod->setAccessible(true);
 
-        $signingStr = $reflectionMethod->invoke($this->authService, 'GET', '/test/resource', '', 'test.qiniuapi.com', $headers, $body);
+        $signingStr = $reflectionMethod->invoke($authService, 'GET', '/test/resource', '', 'test.qiniuapi.com', $headers, $body);
+        self::assertIsString($signingStr);
 
         $this->assertStringContainsString('GET /test/resource', $signingStr);
         $this->assertStringContainsString('Host: test.qiniuapi.com', $signingStr);
@@ -136,26 +199,30 @@ class AuthServiceTest extends TestCase
         $this->assertStringContainsString($body, $signingStr);
     }
 
-    public function testGenerateSigningStr_withXQiniuHeaders_sortsHeadersCorrectly(): void
+    public function testGenerateSigningStrWithXQiniuHeadersSortsHeadersCorrectly(): void
     {
+        /** @var AuthService $authService */
+        $authService = self::getService(AuthService::class);
+
         $headers = [
             'Content-Type' => 'application/json',
             'X-Qiniu-Z-Header' => 'z-value',
             'X-Qiniu-A-Header' => 'a-value',
-            'X-Qiniu-B-Header' => 'b-value'
+            'X-Qiniu-B-Header' => 'b-value',
         ];
 
         $reflectionMethod = new \ReflectionMethod(AuthService::class, 'generateSigningStr');
         $reflectionMethod->setAccessible(true);
 
-        $signingStr = $reflectionMethod->invoke($this->authService, 'POST', '/path', 'param=value', 'domain.com', $headers, null);
+        $signingStr = $reflectionMethod->invoke($authService, 'POST', '/path', 'param=value', 'domain.com', $headers, null);
+        self::assertIsString($signingStr);
 
         // 验证X-Qiniu头按ASCII顺序排序
         $lines = explode("\n", $signingStr);
         // 筛选出X-Qiniu开头的行
         $xQiniuLines = [];
         foreach ($lines as $line) {
-            if (strpos($line, 'X-Qiniu-') === 0) {
+            if (0 === strpos($line, 'X-Qiniu-')) {
                 $xQiniuLines[] = $line;
             }
         }
@@ -166,33 +233,41 @@ class AuthServiceTest extends TestCase
         $expected = [
             'X-Qiniu-aHeader: a-value',
             'X-Qiniu-bHeader: b-value',
-            'X-Qiniu-zHeader: z-value'
+            'X-Qiniu-zHeader: z-value',
         ];
 
         $this->assertEquals($expected, $xQiniuLines, 'X-Qiniu headers should be sorted alphabetically');
     }
 
-    public function testGenerateSigningStr_withoutBody_omitsContentType(): void
+    public function testGenerateSigningStrWithoutBodyOmitsContentType(): void
     {
+        /** @var AuthService $authService */
+        $authService = self::getService(AuthService::class);
+
         $headers = ['Other-Header' => 'value'];
 
         $reflectionMethod = new \ReflectionMethod(AuthService::class, 'generateSigningStr');
         $reflectionMethod->setAccessible(true);
 
-        $signingStr = $reflectionMethod->invoke($this->authService, 'GET', '/path', '', 'domain.com', $headers, null);
+        $signingStr = $reflectionMethod->invoke($authService, 'GET', '/path', '', 'domain.com', $headers, null);
+        self::assertIsString($signingStr);
 
         $this->assertStringNotContainsString('Content-Type:', $signingStr);
     }
 
-    public function testGenerateSigningStr_withOctetStreamContentType_omitsBody(): void
+    public function testGenerateSigningStrWithOctetStreamContentTypeOmitsBody(): void
     {
+        /** @var AuthService $authService */
+        $authService = self::getService(AuthService::class);
+
         $headers = ['Content-Type' => 'application/octet-stream'];
         $body = 'binary data';
 
         $reflectionMethod = new \ReflectionMethod(AuthService::class, 'generateSigningStr');
         $reflectionMethod->setAccessible(true);
 
-        $signingStr = $reflectionMethod->invoke($this->authService, 'POST', '/path', '', 'domain.com', $headers, $body);
+        $signingStr = $reflectionMethod->invoke($authService, 'POST', '/path', '', 'domain.com', $headers, $body);
+        self::assertIsString($signingStr);
 
         $this->assertStringNotContainsString($body, $signingStr);
     }

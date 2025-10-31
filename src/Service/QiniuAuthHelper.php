@@ -3,10 +3,12 @@
 namespace QiniuStorageBundle\Service;
 
 use QiniuStorageBundle\Entity\Account;
+use Symfony\Component\DependencyInjection\Attribute\Autoconfigure;
 
 /**
  * 七牛云认证辅助服务
  */
+#[Autoconfigure(public: true)]
 class QiniuAuthHelper
 {
     public function __construct(
@@ -16,6 +18,8 @@ class QiniuAuthHelper
 
     /**
      * 生成认证头部
+     *
+     * @return array<string, string>
      */
     public function generateAuthHeaders(Account $account, string $url): array
     {

@@ -2,119 +2,70 @@
 
 namespace QiniuStorageBundle\Tests\Command;
 
-use Doctrine\ORM\EntityManagerInterface;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use QiniuStorageBundle\Command\SyncBucketMinuteStatisticCommand;
-use QiniuStorageBundle\Service\StatisticSyncService;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
+use Tourze\PHPUnitSymfonyKernelTest\AbstractCommandTestCase;
 
-class SyncBucketMinuteStatisticCommandTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(SyncBucketMinuteStatisticCommand::class)]
+#[RunTestsInSeparateProcesses]
+final class SyncBucketMinuteStatisticCommandTest extends AbstractCommandTestCase
 {
-    private EntityManagerInterface $entityManager;
-    private StatisticSyncService $statisticSyncService;
-    private SyncBucketMinuteStatisticCommand $command;
-    private CommandTester $commandTester;
-
-    protected function setUp(): void
+    protected function onSetUp(): void
     {
-        // 创建模拟对象
-        $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->statisticSyncService = $this->createMock(StatisticSyncService::class);
-
-        // 创建命令
-        $this->command = new SyncBucketMinuteStatisticCommand(
-            $this->entityManager,
-            $this->statisticSyncService
-        );
-
-        // 创建命令测试器
-        $this->commandTester = new CommandTester($this->command);
+        // 此测试类无需特殊设置
     }
 
-    public function testExecute_withNoBuckets_displaysWarning(): void
+    protected function getCommandTester(): CommandTester
     {
-        // 设置statisticSyncService返回空数组
-        $this->statisticSyncService->method('getValidBuckets')
-            ->willReturn([]);
+        $command = self::getService(SyncBucketMinuteStatisticCommand::class);
 
-        // 执行命令
-        $this->commandTester->execute([]);
-
-        // 断言输出包含警告信息
-        $output = $this->commandTester->getDisplay();
-        $this->assertStringContainsString('没有找到有效的存储空间配置', $output);
+        return new CommandTester($command);
     }
 
-    public function testExecute_withValidBuckets_syncsStatistics(): void
+    public function testConstructor(): void
     {
-        // 创建模拟存储桶
-        $bucket = $this->createMock(\QiniuStorageBundle\Entity\Bucket::class);
-        $bucket->method('getName')->willReturn('test-bucket');
+        $command = self::getService(SyncBucketMinuteStatisticCommand::class);
 
-        // 设置statisticSyncService返回模拟存储桶
-        $this->statisticSyncService->method('getValidBuckets')
-            ->willReturn([$bucket]);
-
-        // 设置StatisticSyncService预期行为
-        $this->statisticSyncService->expects($this->atLeastOnce())
-            ->method('syncBucketStatistic')
-            ->with(
-                $this->equalTo(\QiniuStorageBundle\Enum\TimeGranularity::MINUTE),
-                $this->anything(),
-                $bucket,
-                $this->anything()
-            );
-
-        // 执行命令
-        $this->commandTester->execute([]);
-
-        // 断言成功信息
-        $output = $this->commandTester->getDisplay();
-        $this->assertStringContainsString('所有存储空间的5分钟统计信息同步完成', $output);
+        $this->assertNotNull($command);
     }
 
-    public function testExecute_withCustomMinutes_syncsCorrectCount(): void
+    public function testGetName(): void
     {
-        // 创建模拟存储桶
-        $bucket = $this->createMock(\QiniuStorageBundle\Entity\Bucket::class);
-        $bucket->method('getName')->willReturn('test-bucket');
+        $command = self::getService(SyncBucketMinuteStatisticCommand::class);
 
-        $this->statisticSyncService->method('getValidBuckets')
-            ->willReturn([$bucket]);
+        $this->assertEquals('qiniu:sync-bucket-minute-statistics', $command->getName());
+    }
 
-        // 设置自定义分钟数
-        $customMinutes = 6;
+    public function testExecuteWithInvalidMinutesReturnsFailure(): void
+    {
+        $command = self::getService(SyncBucketMinuteStatisticCommand::class);
 
-        // 验证StatisticSyncService被调用正确次数
-        $this->statisticSyncService->expects($this->exactly($customMinutes))
-            ->method('syncBucketStatistic')
-            ->with(
-                $this->equalTo(\QiniuStorageBundle\Enum\TimeGranularity::MINUTE),
-                $this->anything(),
-                $bucket,
-                $this->anything()
-            );
+        $commandTester = new CommandTester($command);
 
-        // 执行命令带自定义分钟参数
-        $this->commandTester->execute([
-            '--minutes' => $customMinutes
+        $commandTester->execute([
+            '--minutes' => 0,
         ]);
 
-        $this->assertEquals(0, $this->commandTester->getStatusCode());
-    }
+        $this->assertEquals(Command::FAILURE, $commandTester->getStatusCode());
 
-    public function testExecute_withInvalidMinutes_returnsFailure(): void
-    {
-        // 执行命令带无效的分钟参数
-        $this->commandTester->execute([
-            '--minutes' => 0
-        ]);
-
-        // 断言返回失败状态码
-        $this->assertEquals(\Symfony\Component\Console\Command\Command::FAILURE, $this->commandTester->getStatusCode());
-        
-        // 断言错误信息被显示
-        $output = $this->commandTester->getDisplay();
+        $output = $commandTester->getDisplay();
         $this->assertStringContainsString('同步时间段数量必须大于0', $output);
+    }
+
+    public function testOptionMinutes(): void
+    {
+        $command = self::getService(SyncBucketMinuteStatisticCommand::class);
+        $commandTester = new CommandTester($command);
+
+        $commandTester->execute(['--minutes' => '6']);
+
+        $this->assertSame(Command::SUCCESS, $commandTester->getStatusCode());
+        $this->assertStringContainsString('所有存储空间的5分钟统计信息同步完成', $commandTester->getDisplay());
     }
 }

@@ -22,7 +22,7 @@ use Tourze\Symfony\CronJob\Attribute\AsCronTask;
 class SyncBucketMinuteStatisticCommand extends Command
 {
     public const NAME = 'qiniu:sync-bucket-minute-statistics';
-    
+
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly StatisticSyncService $statisticSyncService,
@@ -44,15 +44,18 @@ class SyncBucketMinuteStatisticCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $minutes = (int) $input->getOption('minutes');
+        $minutesOption = $input->getOption('minutes');
+        $minutes = is_numeric($minutesOption) ? (int) $minutesOption : 12;
         if ($minutes < 1) {
             $io->error('同步时间段数量必须大于0');
+
             return Command::FAILURE;
         }
 
         $buckets = $this->statisticSyncService->getValidBuckets();
-        if (empty($buckets)) {
+        if ([] === $buckets) {
             $io->warning('没有找到有效的存储空间配置');
+
             return Command::SUCCESS;
         }
 
@@ -65,7 +68,7 @@ class SyncBucketMinuteStatisticCommand extends Command
         $minuteRounded = (int) floor($minute / 5) * 5;
         $now = $now->setMinute($minuteRounded)->setSecond(0)->startOfSecond();
 
-        for ($i = 1; $i <= $minutes; $i++) {
+        for ($i = 1; $i <= $minutes; ++$i) {
             $times[] = $now->subMinutes($i * 5);
         }
         $times = array_reverse($times);
@@ -89,6 +92,7 @@ class SyncBucketMinuteStatisticCommand extends Command
         }
 
         $io->success('所有存储空间的5分钟统计信息同步完成');
+
         return Command::SUCCESS;
     }
 }

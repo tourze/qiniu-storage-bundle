@@ -6,13 +6,19 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use QiniuStorageBundle\Entity\Bucket;
 use QiniuStorageBundle\Entity\BucketHourStatistic;
+use Tourze\PHPUnitSymfonyKernelTest\Attribute\AsRepository;
 
 /**
- * @method BucketHourStatistic|null find($id, $lockMode = null, $lockVersion = null)
- * @method BucketHourStatistic|null findOneBy(array $criteria, array $orderBy = null)
- * @method BucketHourStatistic[] findAll()
- * @method BucketHourStatistic[] findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
+ * 存储空间小时级统计 Repository
+ *
+ * 提供存储空间小时级统计数据的数据访问操作，包括：
+ * - 基础的 CRUD 操作
+ * - 按时间范围查询统计数据
+ * - 按存储空间和时间查找特定统计记录
+ *
+ * @extends ServiceEntityRepository<BucketHourStatistic>
  */
+#[AsRepository(entityClass: BucketHourStatistic::class)]
 class BucketHourStatisticRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -21,13 +27,47 @@ class BucketHourStatisticRepository extends ServiceEntityRepository
     }
 
     /**
+     * 保存小时级统计实体
+     *
+     * @param BucketHourStatistic $entity 小时级统计实体
+     * @param bool $flush 是否立即刷新到数据库
+     */
+    public function save(BucketHourStatistic $entity, bool $flush = true): void
+    {
+        $this->getEntityManager()->persist($entity);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+    }
+
+    /**
+     * 删除小时级统计实体
+     *
+     * @param BucketHourStatistic $entity 小时级统计实体
+     * @param bool $flush 是否立即刷新到数据库
+     */
+    public function remove(BucketHourStatistic $entity, bool $flush = true): void
+    {
+        $this->getEntityManager()->remove($entity);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+    }
+
+    /**
      * 查找指定时间范围内的统计数据
      *
-     * @return BucketHourStatistic[]
+     * @param Bucket $bucket 存储空间实体
+     * @param \DateTimeInterface $start 开始时间
+     * @param \DateTimeInterface $end 结束时间
+     * @return array<int, BucketHourStatistic> 按时间升序排列的统计数据数组
      */
     public function findByTimeRange(Bucket $bucket, \DateTimeInterface $start, \DateTimeInterface $end): array
     {
-        return $this->createQueryBuilder('s')
+        /** @var array<int, BucketHourStatistic> $result */
+        $result = $this->createQueryBuilder('s')
             ->andWhere('s.bucket = :bucket')
             ->andWhere('s.time >= :start')
             ->andWhere('s.time <= :end')
@@ -36,17 +76,31 @@ class BucketHourStatisticRepository extends ServiceEntityRepository
             ->setParameter('end', $end)
             ->orderBy('s.time', 'ASC')
             ->getQuery()
-            ->getResult();
+            ->getResult()
+        ;
+
+        return $result;
     }
 
+    /**
+     * 根据存储空间和时间查找特定的统计记录
+     *
+     * @param Bucket $bucket 存储空间实体
+     * @param \DateTimeInterface $time 统计时间
+     * @return BucketHourStatistic|null 找到的统计记录，未找到时返回 null
+     */
     public function findOneByBucketAndTime(Bucket $bucket, \DateTimeInterface $time): ?BucketHourStatistic
     {
-        return $this->createQueryBuilder('s')
+        /** @var BucketHourStatistic|null $result */
+        $result = $this->createQueryBuilder('s')
             ->andWhere('s.bucket = :bucket')
             ->andWhere('s.time = :time')
             ->setParameter('bucket', $bucket)
             ->setParameter('time', $time)
             ->getQuery()
-            ->getOneOrNullResult();
+            ->getOneOrNullResult()
+        ;
+
+        return $result;
     }
 }

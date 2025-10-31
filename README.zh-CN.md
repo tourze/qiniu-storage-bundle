@@ -3,8 +3,25 @@
 [English](README.md) | [中文](README.zh-CN.md)
 
 [![最新版本](https://img.shields.io/packagist/v/tourze/qiniu-storage-bundle.svg?style=flat-square)](https://packagist.org/packages/tourze/qiniu-storage-bundle)
+[![PHP 版本](https://img.shields.io/packagist/php-v/tourze/qiniu-storage-bundle.svg?style=flat-square)](https://packagist.org/packages/tourze/qiniu-storage-bundle)
+[![许可证](https://img.shields.io/packagist/l/tourze/qiniu-storage-bundle.svg?style=flat-square)](https://github.com/tourze/qiniu-storage-bundle/blob/master/LICENSE)
+[![构建状态](https://img.shields.io/github/actions/workflow/status/tourze/php-monorepo/test.yml?style=flat-square)](https://github.com/tourze/php-monorepo/actions)
+[![代码覆盖率](https://img.shields.io/codecov/c/github/tourze/php-monorepo.svg?style=flat-square)](https://codecov.io/gh/tourze/php-monorepo)
+[![总下载量](https://img.shields.io/packagist/dt/tourze/qiniu-storage-bundle.svg?style=flat-square)](https://packagist.org/packages/tourze/qiniu-storage-bundle)
 
 一个用于将七牛云存储服务集成到您的应用程序中的 Symfony 捆绑包。
+
+## 目录
+
+- [功能特性](#功能特性)
+- [安装](#安装)
+- [快速开始](#快速开始)
+- [配置](#配置)
+- [高级用法](#高级用法)
+- [依赖关系](#依赖关系)
+- [安全](#安全)
+- [贡献](#贡献)
+- [许可证](#许可证)
 
 ## 功能特性
 
@@ -98,6 +115,121 @@ php bin/console qiniu:sync-bucket-day-statistics
 
 # 同步分钟级统计数据
 php bin/console qiniu:sync-bucket-minute-statistics
+```
+
+## 配置
+
+### 环境变量
+
+在 `.env` 文件中配置环境变量：
+
+```env
+# 可选：配置 API 请求的默认超时时间
+QINIU_DEFAULT_TIMEOUT=30
+```
+
+### 捆绑包配置
+
+在 `config/packages/qiniu_storage.yaml` 创建配置文件：
+
+```yaml
+qiniu_storage:
+    default_timeout: 30
+    retry_attempts: 3
+```
+
+## 依赖关系
+
+此捆绑包需要以下依赖：
+
+- `doctrine/orm` (^3.0) - 实体管理
+- `symfony/http-client` (^7.3) - API 请求  
+- `symfony/console` (^7.3) - 控制台命令
+- `nesbot/carbon` (^2.72 || ^3) - 日期处理
+
+## 安全
+
+### 凭证管理
+
+- 安全存储访问密钥和秘密密钥
+- 使用环境变量进行敏感配置
+- 定期轮换您的 API 凭证
+- 在应用程序中实施适当的访问控制
+
+### 速率限制
+
+该捆绑包包含 API 请求的内置速率限制，以防止配额耗尽并确保
+七牛云服务的公平使用。
+
+## 高级用法
+
+### 自定义身份验证
+
+您可以扩展 AuthService 以实现自定义身份验证逻辑：
+
+```php
+<?php
+
+use QiniuStorageBundle\Service\AuthService;
+
+class CustomAuthService extends AuthService
+{
+    public function createCustomToken(Account $account, array $policy): string
+    {
+        // 自定义令牌生成逻辑
+        return parent::createUploadToken($account, $policy['bucket'], $policy, 3600);
+    }
+}
+```
+
+### 存储统计 API
+
+以编程方式访问详细的存储统计数据：
+
+```php
+<?php
+
+use QiniuStorageBundle\Service\StorageStatisticsService;
+use QiniuStorageBundle\Enum\TimeGranularity;
+use QiniuStorageBundle\Entity\Bucket;
+use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Console\Output\NullOutput;
+use Symfony\Component\Console\Input\ArrayInput;
+
+class StatisticsController
+{
+    public function getStatistics(StorageStatisticsService $service, Bucket $bucket)
+    {
+        $begin = date('Ymd', strtotime('-7 days'));
+        $end = date('Ymd');
+        
+        // 为控制台输出创建 SymfonyStyle 实例（getStandardStorage 方法必需）
+        $io = new SymfonyStyle(new ArrayInput([]), new NullOutput());
+        
+        // 获取标准存储统计数据
+        $standardStorage = $service->getStandardStorage(
+            TimeGranularity::DAY, 
+            $bucket, 
+            $begin, 
+            $end,
+            $io
+        );
+        
+        // 获取 GET 请求次数（io 参数是可选的）
+        $getRequests = $service->getGetRequests(
+            TimeGranularity::DAY,
+            $bucket,
+            $begin,
+            $end,
+            null
+        );
+        
+        return $this->json([
+            'standardStorage' => $standardStorage,
+            'getRequests' => $getRequests
+        ]);
+    }
+}
 ```
 
 ## 贡献

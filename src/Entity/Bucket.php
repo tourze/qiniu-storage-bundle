@@ -5,6 +5,7 @@ namespace QiniuStorageBundle\Entity;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use QiniuStorageBundle\Repository\BucketRepository;
+use Symfony\Component\Validator\Constraints as Assert;
 use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineTrackBundle\Attribute\TrackColumn;
@@ -16,33 +17,47 @@ class Bucket implements \Stringable
 {
     use TimestampableAware;
     use BlameableAware;
+
+    /**
+     * @var int|null 主键ID，新建时为null，持久化后为int
+     */
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => 'ID'])]
-    private ?int $id = 0;
+    private ?int $id = null;
 
     #[ORM\ManyToOne(targetEntity: Account::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private Account $account;
 
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 50)]
     #[ORM\Column(type: Types::STRING, length: 50, options: ['comment' => '存储空间名称'])]
     private string $name;
 
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 50)]
     #[ORM\Column(type: Types::STRING, length: 50, options: ['comment' => '存储区域'])]
     private string $region;
 
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 255)]
     #[ORM\Column(type: Types::STRING, length: 255, options: ['comment' => '访问域名'])]
     private string $domain;
 
+    #[Assert\NotNull]
     #[ORM\Column(type: Types::BOOLEAN, options: ['comment' => '是否为私有空间'])]
     private bool $private = false;
 
+    #[Assert\Type(type: \DateTimeImmutable::class)]
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true, options: ['comment' => '最后同步时间'])]
     private ?\DateTimeImmutable $lastSyncTime = null;
 
+    #[Assert\Length(max: 255)]
     #[ORM\Column(type: Types::STRING, length: 255, nullable: true, options: ['comment' => '备注'])]
     private ?string $remark = null;
 
+    #[Assert\NotNull]
     #[IndexColumn]
     #[TrackColumn]
     #[ORM\Column(type: Types::BOOLEAN, nullable: true, options: ['comment' => '有效', 'default' => 0])]
@@ -58,10 +73,9 @@ class Bucket implements \Stringable
         return $this->account;
     }
 
-    public function setAccount(Account $account): self
+    public function setAccount(Account $account): void
     {
         $this->account = $account;
-        return $this;
     }
 
     public function getName(): string
@@ -69,10 +83,9 @@ class Bucket implements \Stringable
         return $this->name;
     }
 
-    public function setName(string $name): self
+    public function setName(string $name): void
     {
         $this->name = $name;
-        return $this;
     }
 
     public function getRegion(): string
@@ -80,10 +93,9 @@ class Bucket implements \Stringable
         return $this->region;
     }
 
-    public function setRegion(string $region): self
+    public function setRegion(string $region): void
     {
         $this->region = $region;
-        return $this;
     }
 
     public function getDomain(): string
@@ -91,10 +103,9 @@ class Bucket implements \Stringable
         return $this->domain;
     }
 
-    public function setDomain(string $domain): self
+    public function setDomain(string $domain): void
     {
         $this->domain = $domain;
-        return $this;
     }
 
     public function isPrivate(): bool
@@ -102,10 +113,9 @@ class Bucket implements \Stringable
         return $this->private;
     }
 
-    public function setPrivate(bool $private): self
+    public function setPrivate(bool $private): void
     {
         $this->private = $private;
-        return $this;
     }
 
     public function getLastSyncTime(): ?\DateTimeImmutable
@@ -113,10 +123,9 @@ class Bucket implements \Stringable
         return $this->lastSyncTime;
     }
 
-    public function setLastSyncTime(?\DateTimeImmutable $lastSyncTime): self
+    public function setLastSyncTime(?\DateTimeImmutable $lastSyncTime): void
     {
         $this->lastSyncTime = $lastSyncTime;
-        return $this;
     }
 
     public function getRemark(): ?string
@@ -124,10 +133,9 @@ class Bucket implements \Stringable
         return $this->remark;
     }
 
-    public function setRemark(?string $remark): self
+    public function setRemark(?string $remark): void
     {
         $this->remark = $remark;
-        return $this;
     }
 
     public function isValid(): ?bool
@@ -135,18 +143,17 @@ class Bucket implements \Stringable
         return $this->valid;
     }
 
-    public function setValid(?bool $valid): self
+    public function setValid(?bool $valid): void
     {
         $this->valid = $valid;
-
-        return $this;
     }
 
     public function __toString(): string
     {
-        if ($this->id === null || $this->id === 0) {
+        if (null === $this->id) {
             return '';
         }
+
         return $this->getName();
     }
 }

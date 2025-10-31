@@ -8,19 +8,34 @@ use QiniuStorageBundle\Entity\Bucket;
 
 trait BucketStatisticAware
 {
+    /**
+     * 所属存储空间
+     */
     #[ORM\ManyToOne(targetEntity: Bucket::class)]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private Bucket $bucket;
 
+    /**
+     * 标准存储量(字节)
+     */
     #[ORM\Column(type: Types::BIGINT, options: ['comment' => '标准存储量(字节)', 'default' => 0])]
     private int $standardStorage = 0;
 
+    /**
+     * 低频存储量(字节)
+     */
     #[ORM\Column(type: Types::BIGINT, options: ['comment' => '低频存储量(字节)', 'default' => 0])]
     private int $lineStorage = 0;
 
+    /**
+     * 归档存储量(字节)
+     */
     #[ORM\Column(type: Types::BIGINT, options: ['comment' => '归档存储量(字节)', 'default' => 0])]
     private int $archiveStorage = 0;
 
+    /**
+     * 归档直读存储量(字节)
+     */
     #[ORM\Column(type: Types::BIGINT, options: ['comment' => '归档直读存储量(字节)', 'default' => 0])]
     private int $archiveIrStorage = 0;
 
@@ -89,10 +104,9 @@ trait BucketStatisticAware
         return $this->bucket;
     }
 
-    public function setBucket(Bucket $bucket): self
+    public function setBucket(Bucket $bucket): void
     {
         $this->bucket = $bucket;
-        return $this;
     }
 
     public function getStandardStorage(): int
@@ -100,10 +114,9 @@ trait BucketStatisticAware
         return $this->standardStorage;
     }
 
-    public function setStandardStorage(int $standardStorage): self
+    public function setStandardStorage(int $standardStorage): void
     {
         $this->standardStorage = $standardStorage;
-        return $this;
     }
 
     public function getLineStorage(): int
@@ -111,10 +124,9 @@ trait BucketStatisticAware
         return $this->lineStorage;
     }
 
-    public function setLineStorage(int $lineStorage): self
+    public function setLineStorage(int $lineStorage): void
     {
         $this->lineStorage = $lineStorage;
-        return $this;
     }
 
     public function getArchiveStorage(): int
@@ -122,10 +134,9 @@ trait BucketStatisticAware
         return $this->archiveStorage;
     }
 
-    public function setArchiveStorage(int $archiveStorage): self
+    public function setArchiveStorage(int $archiveStorage): void
     {
         $this->archiveStorage = $archiveStorage;
-        return $this;
     }
 
     public function getArchiveIrStorage(): int
@@ -133,10 +144,9 @@ trait BucketStatisticAware
         return $this->archiveIrStorage;
     }
 
-    public function setArchiveIrStorage(int $archiveIrStorage): self
+    public function setArchiveIrStorage(int $archiveIrStorage): void
     {
         $this->archiveIrStorage = $archiveIrStorage;
-        return $this;
     }
 
     public function getDeepArchiveStorage(): int
@@ -144,10 +154,9 @@ trait BucketStatisticAware
         return $this->deepArchiveStorage;
     }
 
-    public function setDeepArchiveStorage(int $deepArchiveStorage): self
+    public function setDeepArchiveStorage(int $deepArchiveStorage): void
     {
         $this->deepArchiveStorage = $deepArchiveStorage;
-        return $this;
     }
 
     public function getIntelligentTieringStorage(): int
@@ -155,10 +164,9 @@ trait BucketStatisticAware
         return $this->intelligentTieringStorage;
     }
 
-    public function setIntelligentTieringStorage(int $intelligentTieringStorage): self
+    public function setIntelligentTieringStorage(int $intelligentTieringStorage): void
     {
         $this->intelligentTieringStorage = $intelligentTieringStorage;
-        return $this;
     }
 
     public function getIntelligentTieringFrequentStorage(): int
@@ -166,10 +174,9 @@ trait BucketStatisticAware
         return $this->intelligentTieringFrequentStorage;
     }
 
-    public function setIntelligentTieringFrequentStorage(int $intelligentTieringFrequentStorage): self
+    public function setIntelligentTieringFrequentStorage(int $intelligentTieringFrequentStorage): void
     {
         $this->intelligentTieringFrequentStorage = $intelligentTieringFrequentStorage;
-        return $this;
     }
 
     public function getIntelligentTieringInfrequentStorage(): int
@@ -177,10 +184,9 @@ trait BucketStatisticAware
         return $this->intelligentTieringInfrequentStorage;
     }
 
-    public function setIntelligentTieringInfrequentStorage(int $intelligentTieringInfrequentStorage): self
+    public function setIntelligentTieringInfrequentStorage(int $intelligentTieringInfrequentStorage): void
     {
         $this->intelligentTieringInfrequentStorage = $intelligentTieringInfrequentStorage;
-        return $this;
     }
 
     public function getIntelligentTieringArchiveStorage(): int
@@ -188,10 +194,9 @@ trait BucketStatisticAware
         return $this->intelligentTieringArchiveStorage;
     }
 
-    public function setIntelligentTieringArchiveStorage(int $intelligentTieringArchiveStorage): self
+    public function setIntelligentTieringArchiveStorage(int $intelligentTieringArchiveStorage): void
     {
         $this->intelligentTieringArchiveStorage = $intelligentTieringArchiveStorage;
-        return $this;
     }
 
     public function getStandardCount(): int
@@ -199,10 +204,9 @@ trait BucketStatisticAware
         return $this->standardCount;
     }
 
-    public function setStandardCount(int $standardCount): self
+    public function setStandardCount(int $standardCount): void
     {
         $this->standardCount = $standardCount;
-        return $this;
     }
 
     public function getLineCount(): int
@@ -210,10 +214,9 @@ trait BucketStatisticAware
         return $this->lineCount;
     }
 
-    public function setLineCount(int $lineCount): self
+    public function setLineCount(int $lineCount): void
     {
         $this->lineCount = $lineCount;
-        return $this;
     }
 
     public function getArchiveCount(): int
@@ -221,10 +224,9 @@ trait BucketStatisticAware
         return $this->archiveCount;
     }
 
-    public function setArchiveCount(int $archiveCount): self
+    public function setArchiveCount(int $archiveCount): void
     {
         $this->archiveCount = $archiveCount;
-        return $this;
     }
 
     public function getArchiveIrCount(): int
@@ -232,10 +234,9 @@ trait BucketStatisticAware
         return $this->archiveIrCount;
     }
 
-    public function setArchiveIrCount(int $archiveIrCount): self
+    public function setArchiveIrCount(int $archiveIrCount): void
     {
         $this->archiveIrCount = $archiveIrCount;
-        return $this;
     }
 
     public function getDeepArchiveCount(): int
@@ -243,10 +244,9 @@ trait BucketStatisticAware
         return $this->deepArchiveCount;
     }
 
-    public function setDeepArchiveCount(int $deepArchiveCount): self
+    public function setDeepArchiveCount(int $deepArchiveCount): void
     {
         $this->deepArchiveCount = $deepArchiveCount;
-        return $this;
     }
 
     public function getIntelligentTieringCount(): int
@@ -254,10 +254,9 @@ trait BucketStatisticAware
         return $this->intelligentTieringCount;
     }
 
-    public function setIntelligentTieringCount(int $intelligentTieringCount): self
+    public function setIntelligentTieringCount(int $intelligentTieringCount): void
     {
         $this->intelligentTieringCount = $intelligentTieringCount;
-        return $this;
     }
 
     public function getIntelligentTieringFrequentCount(): int
@@ -265,10 +264,9 @@ trait BucketStatisticAware
         return $this->intelligentTieringFrequentCount;
     }
 
-    public function setIntelligentTieringFrequentCount(int $intelligentTieringFrequentCount): self
+    public function setIntelligentTieringFrequentCount(int $intelligentTieringFrequentCount): void
     {
         $this->intelligentTieringFrequentCount = $intelligentTieringFrequentCount;
-        return $this;
     }
 
     public function getIntelligentTieringInfrequentCount(): int
@@ -276,10 +274,9 @@ trait BucketStatisticAware
         return $this->intelligentTieringInfrequentCount;
     }
 
-    public function setIntelligentTieringInfrequentCount(int $intelligentTieringInfrequentCount): self
+    public function setIntelligentTieringInfrequentCount(int $intelligentTieringInfrequentCount): void
     {
         $this->intelligentTieringInfrequentCount = $intelligentTieringInfrequentCount;
-        return $this;
     }
 
     public function getIntelligentTieringArchiveCount(): int
@@ -287,10 +284,9 @@ trait BucketStatisticAware
         return $this->intelligentTieringArchiveCount;
     }
 
-    public function setIntelligentTieringArchiveCount(int $intelligentTieringArchiveCount): self
+    public function setIntelligentTieringArchiveCount(int $intelligentTieringArchiveCount): void
     {
         $this->intelligentTieringArchiveCount = $intelligentTieringArchiveCount;
-        return $this;
     }
 
     public function getIntelligentTieringMonitorCount(): int
@@ -298,10 +294,9 @@ trait BucketStatisticAware
         return $this->intelligentTieringMonitorCount;
     }
 
-    public function setIntelligentTieringMonitorCount(int $intelligentTieringMonitorCount): self
+    public function setIntelligentTieringMonitorCount(int $intelligentTieringMonitorCount): void
     {
         $this->intelligentTieringMonitorCount = $intelligentTieringMonitorCount;
-        return $this;
     }
 
     public function getInternetTraffic(): int
@@ -309,10 +304,9 @@ trait BucketStatisticAware
         return $this->internetTraffic;
     }
 
-    public function setInternetTraffic(int $internetTraffic): self
+    public function setInternetTraffic(int $internetTraffic): void
     {
         $this->internetTraffic = $internetTraffic;
-        return $this;
     }
 
     public function getCdnTraffic(): int
@@ -320,10 +314,9 @@ trait BucketStatisticAware
         return $this->cdnTraffic;
     }
 
-    public function setCdnTraffic(int $cdnTraffic): self
+    public function setCdnTraffic(int $cdnTraffic): void
     {
         $this->cdnTraffic = $cdnTraffic;
-        return $this;
     }
 
     public function getGetRequests(): int
@@ -331,10 +324,9 @@ trait BucketStatisticAware
         return $this->getRequests;
     }
 
-    public function setGetRequests(int $getRequests): self
+    public function setGetRequests(int $getRequests): void
     {
         $this->getRequests = $getRequests;
-        return $this;
     }
 
     public function getPutRequests(): int
@@ -342,10 +334,9 @@ trait BucketStatisticAware
         return $this->putRequests;
     }
 
-    public function setPutRequests(int $putRequests): self
+    public function setPutRequests(int $putRequests): void
     {
         $this->putRequests = $putRequests;
-        return $this;
     }
 
     public function getStorageTypeConversions(): int
@@ -353,9 +344,8 @@ trait BucketStatisticAware
         return $this->storageTypeConversions;
     }
 
-    public function setStorageTypeConversions(int $storageTypeConversions): self
+    public function setStorageTypeConversions(int $storageTypeConversions): void
     {
         $this->storageTypeConversions = $storageTypeConversions;
-        return $this;
     }
 }

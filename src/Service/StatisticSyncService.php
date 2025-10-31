@@ -3,6 +3,7 @@
 namespace QiniuStorageBundle\Service;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
 use QiniuStorageBundle\Entity\Bucket;
 use QiniuStorageBundle\Entity\BucketDayStatistic;
@@ -16,6 +17,7 @@ use QiniuStorageBundle\Repository\BucketMinuteStatisticRepository;
 use QiniuStorageBundle\Repository\BucketRepository;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
+#[WithMonologChannel(channel: 'qiniu_storage')]
 class StatisticSyncService
 {
     public function __construct(
@@ -32,26 +34,25 @@ class StatisticSyncService
     /**
      * 同步存储空间统计数据
      *
-     * @param TimeGranularity $granularity 时间粒度
-     * @param \DateTimeImmutable $time 统计时间
-     * @param Bucket $bucket 存储空间
-     * @param SymfonyStyle|null $io 输出接口
-     * @return void
+     * @param TimeGranularity    $granularity 时间粒度
+     * @param \DateTimeImmutable $time        统计时间
+     * @param Bucket             $bucket      存储空间
+     * @param SymfonyStyle|null  $io          输出接口
      */
     public function syncBucketStatistic(
         TimeGranularity $granularity,
         \DateTimeImmutable $time,
         Bucket $bucket,
-        ?SymfonyStyle $io = null
+        ?SymfonyStyle $io = null,
     ): void {
-        if ($io !== null) {
+        if (null !== $io) {
             $io->text(sprintf('正在同步存储空间 [%s] 的统计信息 (%s)', $bucket->getName(), $time->format('Y-m-d H:i')));
         }
 
         $this->logger->info('开始同步存储空间统计信息', [
             'bucket' => $bucket->getName(),
             'time' => $time->format('Y-m-d H:i:s'),
-            'granularity' => $granularity->name
+            'granularity' => $granularity->name,
         ]);
 
         try {
@@ -61,6 +62,9 @@ class StatisticSyncService
             $end = $endTime->format('YmdHis');
 
             // 获取各种存储类型的统计信息
+            if (null === $io) {
+                return; // If no output interface, skip the sync
+            }
             $standardStorage = $this->storageStatisticsService->getStandardStorage($granularity, $bucket, $begin, $end, $io);
             $lineStorage = $this->storageStatisticsService->getLineStorage($granularity, $bucket, $begin, $end, $io);
             $archiveStorage = $this->storageStatisticsService->getArchiveStorage($granularity, $bucket, $begin, $end, $io);
@@ -92,42 +96,42 @@ class StatisticSyncService
             $statistic = $this->findOrCreateStatistic($granularity, $bucket, $time);
 
             // 更新统计信息
-            $statistic->setBucket($bucket)
-                ->setTime($time)
-                // 存储量统计
-                ->setStandardStorage($standardStorage)
-                ->setLineStorage($lineStorage)
-                ->setArchiveStorage($archiveStorage)
-                ->setArchiveIrStorage($archiveIrStorage)
-                ->setDeepArchiveStorage($deepArchiveStorage)
-                ->setIntelligentTieringFrequentStorage($intelligentTieringFrequentStorage)
-                ->setIntelligentTieringInfrequentStorage($intelligentTieringInfrequentStorage)
-                ->setIntelligentTieringArchiveStorage($intelligentTieringArchiveStorage)
-                ->setIntelligentTieringStorage($intelligentTieringFrequentStorage + $intelligentTieringInfrequentStorage + $intelligentTieringArchiveStorage)
-                // 文件数统计
-                ->setStandardCount($standardCount)
-                ->setLineCount($lineCount)
-                ->setArchiveCount($archiveCount)
-                ->setArchiveIrCount($archiveIrCount)
-                ->setDeepArchiveCount($deepArchiveCount)
-                ->setIntelligentTieringFrequentCount($intelligentTieringFrequentCount)
-                ->setIntelligentTieringInfrequentCount($intelligentTieringInfrequentCount)
-                ->setIntelligentTieringArchiveCount($intelligentTieringArchiveCount)
-                ->setIntelligentTieringCount($intelligentTieringFrequentCount + $intelligentTieringInfrequentCount + $intelligentTieringArchiveCount)
-                ->setIntelligentTieringMonitorCount($intelligentTieringMonitorCount)
-                // 流量统计
-                ->setInternetTraffic($internetTraffic)
-                ->setCdnTraffic($cdnTraffic)
-                // 请求统计
-                ->setGetRequests($getRequests)
-                ->setPutRequests($putRequests)
-                ->setStorageTypeConversions(0);
+            $statistic->setBucket($bucket);
+            $statistic->setTime($time);
+            // 存储量统计
+            $statistic->setStandardStorage($standardStorage);
+            $statistic->setLineStorage($lineStorage);
+            $statistic->setArchiveStorage($archiveStorage);
+            $statistic->setArchiveIrStorage($archiveIrStorage);
+            $statistic->setDeepArchiveStorage($deepArchiveStorage);
+            $statistic->setIntelligentTieringFrequentStorage($intelligentTieringFrequentStorage);
+            $statistic->setIntelligentTieringInfrequentStorage($intelligentTieringInfrequentStorage);
+            $statistic->setIntelligentTieringArchiveStorage($intelligentTieringArchiveStorage);
+            $statistic->setIntelligentTieringStorage($intelligentTieringFrequentStorage + $intelligentTieringInfrequentStorage + $intelligentTieringArchiveStorage);
+            // 文件数统计
+            $statistic->setStandardCount($standardCount);
+            $statistic->setLineCount($lineCount);
+            $statistic->setArchiveCount($archiveCount);
+            $statistic->setArchiveIrCount($archiveIrCount);
+            $statistic->setDeepArchiveCount($deepArchiveCount);
+            $statistic->setIntelligentTieringFrequentCount($intelligentTieringFrequentCount);
+            $statistic->setIntelligentTieringInfrequentCount($intelligentTieringInfrequentCount);
+            $statistic->setIntelligentTieringArchiveCount($intelligentTieringArchiveCount);
+            $statistic->setIntelligentTieringCount($intelligentTieringFrequentCount + $intelligentTieringInfrequentCount + $intelligentTieringArchiveCount);
+            $statistic->setIntelligentTieringMonitorCount($intelligentTieringMonitorCount);
+            // 流量统计
+            $statistic->setInternetTraffic($internetTraffic);
+            $statistic->setCdnTraffic($cdnTraffic);
+            // 请求统计
+            $statistic->setGetRequests($getRequests);
+            $statistic->setPutRequests($putRequests);
+            $statistic->setStorageTypeConversions(0);
 
             $this->entityManager->persist($statistic);
             $this->logger->info('同步存储空间统计信息成功', [
                 'bucket' => $bucket->getName(),
                 'time' => $time->format('Y-m-d H:i:s'),
-                'granularity' => $granularity->name
+                'granularity' => $granularity->name,
             ]);
         } catch (\Throwable $e) {
             $message = sprintf('同步存储空间 [%s] 的统计信息失败：%s',
@@ -136,10 +140,10 @@ class StatisticSyncService
                 'bucket' => $bucket->getName(),
                 'time' => $time->format('Y-m-d H:i:s'),
                 'granularity' => $granularity->name,
-                'exception' => $e
+                'exception' => $e,
             ]);
 
-            if ($io !== null) {
+            if (null !== $io) {
                 $io->error($message);
             }
         }
@@ -158,9 +162,10 @@ class StatisticSyncService
     /**
      * 根据时间粒度和给定时间获取时间范围
      *
-     * @param TimeGranularity $granularity 时间粒度
-     * @param \DateTimeImmutable $time 统计时间
-     * @return array [$beginTime, $endTime]
+     * @param TimeGranularity    $granularity 时间粒度
+     * @param \DateTimeImmutable $time        统计时间
+     *
+     * @return array{\DateTimeImmutable, \DateTimeImmutable} [$beginTime, $endTime]
      */
     private function getTimeRange(TimeGranularity $granularity, \DateTimeImmutable $time): array
     {
@@ -193,9 +198,10 @@ class StatisticSyncService
     /**
      * 根据时间粒度查找或创建统计记录
      *
-     * @param TimeGranularity $granularity 时间粒度
-     * @param Bucket $bucket 存储空间
-     * @param \DateTimeImmutable $time 统计时间
+     * @param TimeGranularity    $granularity 时间粒度
+     * @param Bucket             $bucket      存储空间
+     * @param \DateTimeImmutable $time        统计时间
+     *
      * @return BucketDayStatistic|BucketHourStatistic|BucketMinuteStatistic
      */
     private function findOrCreateStatistic(TimeGranularity $granularity, Bucket $bucket, \DateTimeImmutable $time): object

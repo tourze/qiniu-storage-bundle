@@ -1,11 +1,16 @@
 <?php
 
-namespace QiniuStorageBundle\Tests\Unit\Enum;
+namespace QiniuStorageBundle\Tests\Enum;
 
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use QiniuStorageBundle\Enum\QiniuRegion;
+use Tourze\PHPUnitEnum\AbstractEnumTestCase;
 
-class QiniuRegionTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(QiniuRegion::class)]
+final class QiniuRegionTest extends AbstractEnumTestCase
 {
     public function testEnumValues(): void
     {
@@ -123,10 +128,33 @@ class QiniuRegionTest extends TestCase
         // 测试 SelectTrait 提供的基本功能
         $region = QiniuRegion::HUADONG_ZHEJIANG;
         $this->assertSame('华东-浙江', $region->getLabel());
-        
-        // 验证所有枚举值都实现了 Selectable 接口
+
+        // 验证所有枚举值都有标签
         foreach (QiniuRegion::cases() as $case) {
-            $this->assertInstanceOf(\Tourze\EnumExtra\Selectable::class, $case);
+            $label = $case->getLabel();
+            $this->assertIsString($label);
+            $this->assertNotEmpty($label);
         }
+    }
+
+    public function testToArray(): void
+    {
+        $array = QiniuRegion::HUADONG_ZHEJIANG->toArray();
+
+        $this->assertIsArray($array);
+        $this->assertCount(2, $array);
+        $this->assertArrayHasKey('value', $array);
+        $this->assertArrayHasKey('label', $array);
+        $this->assertSame('z0', $array['value']);
+        $this->assertSame('华东-浙江', $array['label']);
+
+        // 测试其他枚举值
+        $zhejiang2Array = QiniuRegion::HUADONG_ZHEJIANG2->toArray();
+        $this->assertSame('cn-east-2', $zhejiang2Array['value']);
+        $this->assertSame('华东-浙江2', $zhejiang2Array['label']);
+
+        $hebeiArray = QiniuRegion::HUABEI_HEBEI->toArray();
+        $this->assertSame('z1', $hebeiArray['value']);
+        $this->assertSame('华北-河北', $hebeiArray['label']);
     }
 }

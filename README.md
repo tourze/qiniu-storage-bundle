@@ -3,8 +3,25 @@
 [English](README.md) | [中文](README.zh-CN.md)
 
 [![Latest Version](https://img.shields.io/packagist/v/tourze/qiniu-storage-bundle.svg?style=flat-square)](https://packagist.org/packages/tourze/qiniu-storage-bundle)
+[![PHP Version](https://img.shields.io/packagist/php-v/tourze/qiniu-storage-bundle.svg?style=flat-square)](https://packagist.org/packages/tourze/qiniu-storage-bundle)
+[![License](https://img.shields.io/packagist/l/tourze/qiniu-storage-bundle.svg?style=flat-square)](https://github.com/tourze/qiniu-storage-bundle/blob/master/LICENSE)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/tourze/php-monorepo/test.yml?style=flat-square)](https://github.com/tourze/php-monorepo/actions)
+[![Coverage Status](https://img.shields.io/codecov/c/github/tourze/php-monorepo.svg?style=flat-square)](https://codecov.io/gh/tourze/php-monorepo)
+[![Total Downloads](https://img.shields.io/packagist/dt/tourze/qiniu-storage-bundle.svg?style=flat-square)](https://packagist.org/packages/tourze/qiniu-storage-bundle)
 
 A Symfony bundle for integrating Qiniu Cloud Storage services into your application.
+
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Advanced Usage](#advanced-usage)
+- [Dependencies](#dependencies)
+- [Security](#security)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Features
 
@@ -98,6 +115,121 @@ php bin/console qiniu:sync-bucket-day-statistics
 
 # Synchronize minute-level statistics
 php bin/console qiniu:sync-bucket-minute-statistics
+```
+
+## Configuration
+
+### Environment Variables
+
+Configure your environment variables in `.env`:
+
+```env
+# Optional: Configure default timeout for API requests
+QINIU_DEFAULT_TIMEOUT=30
+```
+
+### Bundle Configuration
+
+Create a configuration file at `config/packages/qiniu_storage.yaml`:
+
+```yaml
+qiniu_storage:
+    default_timeout: 30
+    retry_attempts: 3
+```
+
+## Dependencies
+
+This bundle requires the following packages:
+
+- `doctrine/orm` (^3.0) - For entity management
+- `symfony/http-client` (^7.3) - For API requests  
+- `symfony/console` (^7.3) - For console commands
+- `nesbot/carbon` (^2.72 || ^3) - For date handling
+
+## Security
+
+### Credentials Management
+
+- Store Access Keys and Secret Keys securely
+- Use environment variables for sensitive configuration
+- Regularly rotate your API credentials
+- Implement proper access controls in your application
+
+### Rate Limiting
+
+The bundle includes built-in rate limiting for API requests to prevent
+quota exhaustion and ensure fair usage of Qiniu Cloud services.
+
+## Advanced Usage
+
+### Custom Authentication
+
+You can extend the AuthService for custom authentication logic:
+
+```php
+<?php
+
+use QiniuStorageBundle\Service\AuthService;
+
+class CustomAuthService extends AuthService
+{
+    public function createCustomToken(Account $account, array $policy): string
+    {
+        // Custom token generation logic
+        return parent::createUploadToken($account, $policy['bucket'], $policy, 3600);
+    }
+}
+```
+
+### Storage Statistics API
+
+Access detailed storage statistics programmatically:
+
+```php
+<?php
+
+use QiniuStorageBundle\Service\StorageStatisticsService;
+use QiniuStorageBundle\Enum\TimeGranularity;
+use QiniuStorageBundle\Entity\Bucket;
+use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Console\Output\NullOutput;
+use Symfony\Component\Console\Input\ArrayInput;
+
+class StatisticsController
+{
+    public function getStatistics(StorageStatisticsService $service, Bucket $bucket)
+    {
+        $begin = date('Ymd', strtotime('-7 days'));
+        $end = date('Ymd');
+        
+        // Create a SymfonyStyle instance for console output (required for getStandardStorage)
+        $io = new SymfonyStyle(new ArrayInput([]), new NullOutput());
+        
+        // Get standard storage statistics
+        $standardStorage = $service->getStandardStorage(
+            TimeGranularity::DAY, 
+            $bucket, 
+            $begin, 
+            $end,
+            $io
+        );
+        
+        // Get GET requests count (io parameter is optional)
+        $getRequests = $service->getGetRequests(
+            TimeGranularity::DAY,
+            $bucket,
+            $begin,
+            $end,
+            null
+        );
+        
+        return $this->json([
+            'standardStorage' => $standardStorage,
+            'getRequests' => $getRequests
+        ]);
+    }
+}
 ```
 
 ## Contributing

@@ -9,4 +9,4 @@ namespace QiniuStorageBundle\Exception;
  */
 class QiniuApiException extends \RuntimeException
 {
-} 
+}

@@ -7,9 +7,15 @@ services:
   # 如果确认要使用自动扫描、自动注册，建议尽可能将要扫描的目录路径收缩，不要设置那么大的范围
   QiniuStorageBundle\Command\:
     resource: '../../Command/'
+  QiniuStorageBundle\Controller\:
+    resource: '../../Controller/'
   QiniuStorageBundle\EventSubscriber\:
     resource: '../../EventSubscriber/'
   QiniuStorageBundle\Repository\:
     resource: '../../Repository/'
   QiniuStorageBundle\Service\:
     resource: '../../Service/'
+  QiniuStorageBundle\Client\:
+    resource: '../../Client/'
+  QiniuStorageBundle\Request\:
+    resource: '../../Request/'

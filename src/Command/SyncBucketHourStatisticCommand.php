@@ -22,7 +22,7 @@ use Tourze\Symfony\CronJob\Attribute\AsCronTask;
 class SyncBucketHourStatisticCommand extends Command
 {
     public const NAME = 'qiniu:sync-bucket-hour-statistics';
-    
+
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly StatisticSyncService $statisticSyncService,
@@ -44,15 +44,18 @@ class SyncBucketHourStatisticCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $hours = (int) $input->getOption('hours');
+        $hoursOption = $input->getOption('hours');
+        $hours = is_numeric($hoursOption) ? (int) $hoursOption : 24;
         if ($hours < 1) {
             $io->error('同步小时数必须大于0');
+
             return Command::FAILURE;
         }
 
         $buckets = $this->statisticSyncService->getValidBuckets();
-        if (empty($buckets)) {
+        if ([] === $buckets) {
             $io->warning('没有找到有效的存储空间配置');
+
             return Command::SUCCESS;
         }
 
@@ -62,8 +65,9 @@ class SyncBucketHourStatisticCommand extends Command
         $now = CarbonImmutable::now()
             ->setMinute(0)
             ->setSecond(0)
-            ->startOfSecond();
-        for ($i = 1; $i <= $hours; $i++) {
+            ->startOfSecond()
+        ;
+        for ($i = 1; $i <= $hours; ++$i) {
             $times[] = $now->subHours($i);
         }
         $times = array_reverse($times);
@@ -87,6 +91,7 @@ class SyncBucketHourStatisticCommand extends Command
         }
 
         $io->success('所有存储空间的统计信息同步完成');
+
         return Command::SUCCESS;
     }
 }

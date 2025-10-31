@@ -6,6 +6,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use QiniuStorageBundle\Entity\Traits\BucketStatisticAware;
 use QiniuStorageBundle\Repository\BucketHourStatisticRepository;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: BucketHourStatisticRepository::class)]
 #[ORM\Table(name: 'ims_qiniu_api_storage_bucket_hour_statistic', options: ['comment' => '七牛云存储空间小时统计'])]
@@ -14,11 +15,16 @@ class BucketHourStatistic implements \Stringable
 {
     use BucketStatisticAware;
 
+    /**
+     * @var int|null 主键ID，新建时为null，持久化后为int
+     */
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => 'ID'])]
-    private ?int $id = 0;
+    private ?int $id = null;
 
+    #[Assert\NotNull]
+    #[Assert\Type(type: \DateTimeImmutable::class)]
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['comment' => '统计时间'])]
     private \DateTimeImmutable $time;
 
@@ -32,10 +38,9 @@ class BucketHourStatistic implements \Stringable
         return $this->time;
     }
 
-    public function setTime(\DateTimeImmutable $time): self
+    public function setTime(\DateTimeImmutable $time): void
     {
         $this->time = $time;
-        return $this;
     }
 
     public function __toString(): string

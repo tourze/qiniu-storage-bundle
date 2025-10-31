@@ -23,7 +23,7 @@ use Tourze\Symfony\CronJob\Attribute\AsCronTask;
 class SyncBucketDayStatisticCommand extends Command
 {
     public const NAME = 'qiniu:sync-bucket-day-statistics';
-    
+
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly StatisticSyncService $statisticSyncService,
@@ -45,15 +45,18 @@ class SyncBucketDayStatisticCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $days = (int) $input->getOption('days');
+        $daysOption = $input->getOption('days');
+        $days = is_numeric($daysOption) ? (int) $daysOption : 7;
         if ($days < 1) {
             $io->error('同步天数必须大于0');
+
             return Command::FAILURE;
         }
 
         $buckets = $this->statisticSyncService->getValidBuckets();
-        if (empty($buckets)) {
+        if ([] === $buckets) {
             $io->warning('没有找到有效的存储空间配置');
+
             return Command::SUCCESS;
         }
 
@@ -61,7 +64,7 @@ class SyncBucketDayStatisticCommand extends Command
         /** @var CarbonImmutable[] $dates */
         $dates = [];
         $now = CarbonImmutable::today()->startOfDay();
-        for ($i = 1; $i <= $days; $i++) {
+        for ($i = 1; $i <= $days; ++$i) {
             $dates[] = $now->subDays($i)->startOfDay();
         }
         $dates = array_reverse($dates);
@@ -85,6 +88,7 @@ class SyncBucketDayStatisticCommand extends Command
         }
 
         $io->success('所有存储空间的统计信息同步完成');
+
         return Command::SUCCESS;
     }
 }

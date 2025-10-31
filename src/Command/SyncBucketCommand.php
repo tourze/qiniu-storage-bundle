@@ -3,13 +3,14 @@
 namespace QiniuStorageBundle\Command;
 
 use Doctrine\ORM\EntityManagerInterface;
-use Qiniu\Auth;
-use Qiniu\Config;
-use Qiniu\Storage\BucketManager;
+use QiniuStorageBundle\Client\QiniuApiClient;
 use QiniuStorageBundle\Entity\Account;
 use QiniuStorageBundle\Entity\Bucket;
 use QiniuStorageBundle\Repository\AccountRepository;
 use QiniuStorageBundle\Repository\BucketRepository;
+use QiniuStorageBundle\Request\GetBucketDomainsRequest;
+use QiniuStorageBundle\Request\GetBucketInfoRequest;
+use QiniuStorageBundle\Request\GetBucketsRequest;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -23,11 +24,12 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 class SyncBucketCommand extends Command
 {
     public const NAME = 'qiniu:sync-buckets';
-    
+
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly AccountRepository $accountRepository,
         private readonly BucketRepository $bucketRepository,
+        private readonly QiniuApiClient $apiClient,
     ) {
         parent::__construct();
     }
@@ -37,8 +39,9 @@ class SyncBucketCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $accounts = $this->accountRepository->findBy(['valid' => true]);
 
-        if (empty($accounts)) {
+        if ([] === $accounts) {
             $io->warning('没有找到有效的七牛云账号配置');
+
             return Command::SUCCESS;
         }
 
@@ -47,6 +50,7 @@ class SyncBucketCommand extends Command
         }
 
         $io->success('所有账号的存储空间同步完成');
+
         return Command::SUCCESS;
     }
 
@@ -54,21 +58,18 @@ class SyncBucketCommand extends Command
     {
         $io->section(sprintf('正在同步账号 [%s] 的存储空间', $account->getName()));
 
-        // 初始化七牛云客户端
-        $auth = new Auth($account->getAccessKey(), $account->getSecretKey());
-        $config = new Config();
-        $bucketManager = new BucketManager($auth, $config);
-
         try {
+            // 设置 API 客户端的账号
+            $this->apiClient->setAccount($account);
+
             // 获取存储空间列表
-            list($buckets, $err) = $bucketManager->buckets();
-            if ($err !== null) {
-                $io->error(sprintf('获取存储空间列表失败：%s', $err->message()));
+            $buckets = $this->getBucketList();
+            if (false === $buckets) {
                 return;
             }
 
             foreach ($buckets as $bucketName) {
-                $this->syncBucketInfo($bucketManager, $account, $bucketName, $io);
+                $this->syncBucketInfo($bucketName, $io);
             }
 
             $this->entityManager->flush();
@@ -78,33 +79,27 @@ class SyncBucketCommand extends Command
         }
     }
 
-    private function syncBucketInfo(BucketManager $bucketManager, Account $account, string $bucketName, SymfonyStyle $io): void
+    private function syncBucketInfo(string $bucketName, SymfonyStyle $io): void
     {
         try {
             // 获取存储空间信息
-            list($domainList, $err) = $bucketManager->domains($bucketName);
-            if ($err !== null) {
-                $io->error(sprintf('获取存储空间 [%s] 的域名信息失败：%s', $bucketName, $err->message()));
+            $bucketInfo = $this->getBucketInfo($bucketName);
+            if (false === $bucketInfo) {
                 return;
             }
 
-            // 获取存储空间区域
-            list($region, $err) = $bucketManager->bucketInfo($bucketName);
-            if ($err !== null) {
-                $io->error(sprintf('获取存储空间 [%s] 的区域信息失败：%s', $bucketName, $err->message()));
-                return;
-            }
-
-            // 获取存储空间信息（包含访问权限）
-            list($bucketInfo, $err) = $bucketManager->bucketInfo($bucketName);
-            if ($err !== null) {
-                $io->error(sprintf('获取存储空间 [%s] 的信息失败：%s', $bucketName, $err->message()));
+            // 获取域名信息
+            $domainList = $this->getBucketDomains($bucketName);
+            if (false === $domainList) {
                 return;
             }
 
             // 解析存储空间信息
-            $region = $bucketInfo['zone'] ?? 'z0';
-            $private = $bucketInfo['private'] ?? false;
+            $region = is_string($bucketInfo['zone'] ?? null) ? $bucketInfo['zone'] : 'z0';
+            $private = is_bool($bucketInfo['private'] ?? null) ? $bucketInfo['private'] : false;
+
+            // 获取当前账号
+            $account = $this->apiClient->getAccount();
 
             // 查找或创建 Bucket 实体
             $bucket = $this->bucketRepository->findOneBy([
@@ -113,18 +108,96 @@ class SyncBucketCommand extends Command
             ]) ?? new Bucket();
 
             // 更新 Bucket 信息
-            $bucket->setAccount($account)
-                ->setName($bucketName)
-                ->setRegion($region)
-                ->setDomain($domainList[0] ?? '') // 使用第一个域名
-                ->setPrivate($private)
-                ->setLastSyncTime(new \DateTimeImmutable())
-                ->setValid(true);
+            $bucket->setAccount($account);
+            $bucket->setName($bucketName);
+            $bucket->setRegion($region);
+            $bucket->setDomain($domainList[0] ?? ''); // 使用第一个域名
+            $bucket->setPrivate($private);
+            $bucket->setLastSyncTime(new \DateTimeImmutable());
+            $bucket->setValid(true);
 
             $this->entityManager->persist($bucket);
             $io->text(sprintf('已同步存储空间 [%s]', $bucketName));
         } catch (\Throwable $e) {
             $io->error(sprintf('同步存储空间 [%s] 时发生错误：%s', $bucketName, $e->getMessage()));
+        }
+    }
+
+    /**
+     * 获取存储空间列表
+     *
+     * @return array<string>|false
+     */
+    private function getBucketList(): array|false
+    {
+        try {
+            $request = new GetBucketsRequest();
+            $result = $this->apiClient->request($request);
+
+            if (!is_array($result)) {
+                return false;
+            }
+
+            // 过滤确保只返回字符串类型的bucket名称
+            return array_filter($result, fn($item): bool => is_string($item));
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 获取存储空间信息
+     *
+     * @return array<string, mixed>|false
+     */
+    private function getBucketInfo(string $bucketName): array|false
+    {
+        try {
+            $request = new GetBucketInfoRequest($bucketName);
+            $result = $this->apiClient->request($request);
+
+            if (!is_array($result)) {
+                return false;
+            }
+
+            // 确保返回的是关联数组，且键名为字符串
+            /** @var array<string, mixed> $typedResult */
+            $typedResult = [];
+            foreach ($result as $key => $value) {
+                if (is_string($key)) {
+                    $typedResult[$key] = $value;
+                }
+            }
+            return $typedResult;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * 获取存储空间域名列表
+     *
+     * @return array<string>|false
+     */
+    private function getBucketDomains(string $bucketName): array|false
+    {
+        try {
+            $request = new GetBucketDomainsRequest($bucketName);
+            $response = $this->apiClient->request($request);
+
+            if (!is_array($response)) {
+                return false;
+            }
+
+            $domains = $response['domains'] ?? null;
+            if (!is_array($domains)) {
+                return false;
+            }
+
+            // 过滤确保只返回字符串类型的域名
+            return array_filter($domains, fn($item): bool => is_string($item));
+        } catch (\Throwable $e) {
+            return false;
         }
     }
 }
